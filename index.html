@@ -3,12 +3,58 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <meta name="theme-color" content="#0A0A0A">
+  <meta name="theme-color" content="#050505">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="description" content="Theo Addo - Developer, Researcher, Creative. Building at the intersection of AI, music, and mental health.">
+
+  <!-- SEO -->
+  <title>Theodore Addo — Developer, Researcher, Creative</title>
+  <meta name="description" content="Theodore Addo builds at the intersection of AI, music, and cognitive technology. Co-Founder of Polarity. Alpert Medical School, Brown University MD '26.">
+  <meta name="keywords" content="Theodore Addo, Theo Addo, Polarity, cognitive technology, AI, Brown University, developer, researcher, WaxFeed, 360 Sound">
+  <meta name="author" content="Theodore Addo">
+  <meta name="robots" content="index, follow">
+
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Theodore Addo — Developer, Researcher, Creative">
+  <meta property="og:description" content="Building at the intersection of AI, music, and cognitive technology. Co-Founder of Polarity. Alpert Medical School, Brown University MD '26.">
+  <meta property="og:site_name" content="Theodore Addo">
+  <meta property="og:locale" content="en_US">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Theodore Addo — Developer, Researcher, Creative">
+  <meta name="twitter:description" content="Building at the intersection of AI, music, and cognitive technology. Co-Founder of Polarity. Alpert Medical School, Brown University MD '26.">
+
+  <!-- Favicons -->
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
-  <title>Theo Addo</title>
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+
+  <!-- Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Person",
+    "name": "Theodore Addo",
+    "jobTitle": "Co-Founder",
+    "worksFor": {
+      "@type": "Organization",
+      "name": "Polarity",
+      "url": "https://polarity-lab.com"
+    },
+    "alumniOf": {
+      "@type": "CollegeOrUniversity",
+      "name": "Brown University"
+    },
+    "sameAs": [
+      "https://github.com/taiscoding",
+      "https://www.linkedin.com/in/theo-addo/",
+      "https://www.youtube.com/channel/UCEdsKG3TMPbJavCJvYyUCHA"
+    ],
+    "knowsAbout": ["Artificial Intelligence", "Cognitive Technology", "Music Production", "Software Engineering", "Radiology"]
+  }
+  </script>
   <style>
     *, *::before, *::after {
       margin: 0;
@@ -23,182 +69,135 @@
 
     body {
       font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-      font-weight: 500;
-      background: #0A0A0A;
+      font-weight: 400;
+      background: #050505;
       color: #fff;
       overflow-x: hidden;
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
       min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
 
-    /* Animated background particles - Polarity style */
-    .backdrop {
+    /* WebGL canvas background */
+    #webgl-bg {
       position: fixed;
       top: 0;
       left: 0;
-      right: 0;
-      bottom: 0;
-      pointer-events: none;
+      width: 100%;
+      height: 100%;
       z-index: 0;
+      pointer-events: none;
     }
 
-    .backdrop::before {
+    /* Subtle grain overlay */
+    body::after {
       content: '';
-      position: absolute;
+      position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
-      background-image:
-        radial-gradient(60px 60px at 88% 12%, rgba(78, 205, 196, 0.15) 0%, transparent 70%),
-        radial-gradient(100px 100px at 15% 25%, rgba(78, 205, 196, 0.08) 0%, transparent 70%),
-        radial-gradient(120px 120px at 75% 70%, rgba(255, 160, 122, 0.07) 0%, transparent 70%),
-        radial-gradient(90px 90px at 50% 50%, rgba(187, 143, 206, 0.06) 0%, transparent 70%),
-        radial-gradient(4px 4px at 15% 20%, #4ECDC4 0%, rgba(78, 205, 196, 0.4) 40%, transparent 70%),
-        radial-gradient(5px 5px at 88% 12%, #4ECDC4 0%, rgba(78, 205, 196, 0.5) 40%, transparent 70%),
-        radial-gradient(3px 3px at 45% 85%, #4ECDC4 0%, rgba(78, 205, 196, 0.4) 40%, transparent 70%),
-        radial-gradient(5px 5px at 75% 30%, #FFA07A 0%, rgba(255, 160, 122, 0.4) 40%, transparent 70%),
-        radial-gradient(4px 4px at 25% 70%, #FFA07A 0%, rgba(255, 160, 122, 0.4) 40%, transparent 70%),
-        radial-gradient(3px 3px at 90% 55%, #FFA07A 0%, rgba(255, 160, 122, 0.3) 40%, transparent 70%),
-        radial-gradient(4px 4px at 60% 45%, #BB8FCE 0%, rgba(187, 143, 206, 0.4) 40%, transparent 70%),
-        radial-gradient(5px 5px at 10% 60%, #BB8FCE 0%, rgba(187, 143, 206, 0.4) 40%, transparent 70%),
-        radial-gradient(3px 3px at 35% 35%, #BB8FCE 0%, rgba(187, 143, 206, 0.3) 40%, transparent 70%),
-        radial-gradient(2px 2px at 5% 15%, rgba(78, 205, 196, 0.7) 0%, transparent 100%),
-        radial-gradient(1.5px 1.5px at 12% 42%, rgba(255, 160, 122, 0.6) 0%, transparent 100%),
-        radial-gradient(2px 2px at 8% 78%, rgba(187, 143, 206, 0.6) 0%, transparent 100%),
-        radial-gradient(1.5px 1.5px at 22% 8%, rgba(78, 205, 196, 0.5) 0%, transparent 100%),
-        radial-gradient(2px 2px at 28% 55%, rgba(255, 160, 122, 0.5) 0%, transparent 100%),
-        radial-gradient(1.5px 1.5px at 35% 92%, rgba(187, 143, 206, 0.5) 0%, transparent 100%),
-        radial-gradient(2px 2px at 42% 18%, rgba(78, 205, 196, 0.6) 0%, transparent 100%),
-        radial-gradient(1.5px 1.5px at 55% 65%, rgba(255, 160, 122, 0.5) 0%, transparent 100%),
-        radial-gradient(2px 2px at 62% 5%, rgba(187, 143, 206, 0.6) 0%, transparent 100%),
-        radial-gradient(1.5px 1.5px at 68% 88%, rgba(78, 205, 196, 0.5) 0%, transparent 100%),
-        radial-gradient(2px 2px at 78% 38%, rgba(255, 160, 122, 0.6) 0%, transparent 100%),
-        radial-gradient(1.5px 1.5px at 85% 72%, rgba(187, 143, 206, 0.5) 0%, transparent 100%),
-        radial-gradient(2px 2px at 92% 25%, rgba(78, 205, 196, 0.6) 0%, transparent 100%),
-        radial-gradient(1.5px 1.5px at 95% 95%, rgba(255, 160, 122, 0.5) 0%, transparent 100%);
-      animation: float 20s ease-in-out infinite;
-    }
-
-    @keyframes float {
-      0%, 100% { transform: translate(0, 0) scale(1); }
-      25% { transform: translate(-10px, 10px) scale(1.02); }
-      50% { transform: translate(5px, -5px) scale(0.98); }
-      75% { transform: translate(10px, 5px) scale(1.01); }
-    }
-
-    .backdrop::after {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background:
-        radial-gradient(ellipse 50vw 35vh at 20% 30%, rgba(78, 205, 196, 0.025) 0%, transparent 50%),
-        radial-gradient(ellipse 40vw 28vh at 80% 65%, rgba(255, 160, 122, 0.02) 0%, transparent 50%),
-        radial-gradient(ellipse 45vw 30vh at 50% 80%, rgba(187, 143, 206, 0.02) 0%, transparent 50%);
+      pointer-events: none;
+      z-index: 9998;
+      opacity: 0.025;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+      background-repeat: repeat;
+      background-size: 256px 256px;
     }
 
     /* Main content */
     .container {
       position: relative;
       z-index: 1;
-      max-width: 1200px;
+      width: 100%;
+      max-width: 1100px;
       margin: 0 auto;
-      padding: clamp(40px, 8vw, 100px) clamp(20px, 5vw, 60px);
+      padding: clamp(32px, 6vw, 80px) clamp(20px, 5vw, 60px);
     }
 
-    /* Navigation / Header */
+    /* Header */
     .header {
       display: flex;
-      justify-content: center;
+      justify-content: space-between;
       align-items: center;
-      margin-bottom: clamp(60px, 10vw, 120px);
+      margin-bottom: clamp(80px, 14vw, 160px);
       flex-wrap: wrap;
-      gap: 20px;
+      gap: 16px;
+    }
+
+    .header-label {
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: #ffffff;
     }
 
     .newsletter-form {
       display: flex;
       align-items: center;
-      gap: 12px;
-      flex-wrap: wrap;
-      justify-content: center;
-    }
-
-    .newsletter-form span {
-      font-size: 14px;
-      opacity: 0.5;
-      font-weight: 300;
+      gap: 0;
     }
 
     .newsletter-form input {
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 8px;
-      padding: 10px 16px;
-      font-size: 14px;
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.15);
+      border-right: none;
+      padding: 10px 14px;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.05em;
       color: #fff;
       font-family: inherit;
+      text-transform: uppercase;
       width: 200px;
       outline: none;
-      transition: all 0.3s;
+      transition: border-color 0.3s;
     }
 
     .newsletter-form input:focus {
-      border-color: #4ECDC4;
-      box-shadow: 0 0 0 3px rgba(78, 205, 196, 0.1);
+      border-color: rgba(255,255,255,0.4);
     }
 
     .newsletter-form input::placeholder {
-      color: rgba(255,255,255,0.3);
+      color: rgba(255,255,255,0.2);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
     }
 
     .newsletter-form button {
-      background: rgba(255,255,255,0.1);
-      border: 1px solid rgba(255,255,255,0.2);
-      border-radius: 8px;
-      padding: 10px;
-      width: 40px;
-      height: 40px;
-      color: #fff;
+      background: #fff;
+      border: 1px solid #fff;
+      padding: 10px 14px;
+      color: #050505;
       cursor: pointer;
-      transition: all 0.3s;
+      transition: all 0.2s;
       display: flex;
       align-items: center;
       justify-content: center;
+      height: 39px;
     }
 
     .newsletter-form button:hover {
-      background: rgba(255,255,255,0.15);
-      border-color: rgba(255,255,255,0.3);
+      background: rgba(255,255,255,0.85);
     }
 
-    @media (max-width: 600px) {
-      .newsletter-form {
-        width: 100%;
-      }
-      .newsletter-form span {
-        width: 100%;
-        text-align: center;
-      }
-      .newsletter-form input {
-        flex: 1;
-        min-width: 0;
-      }
-    }
-
-    /* Hero section */
+    /* Hero */
     .hero {
-      margin-bottom: clamp(80px, 12vw, 160px);
+      margin-bottom: clamp(80px, 14vw, 180px);
       text-align: center;
     }
 
     .hero h1 {
       font-weight: 700;
-      font-size: clamp(36px, 8vw, 80px);
-      letter-spacing: -0.02em;
-      line-height: 0.95;
-      margin-bottom: 20px;
+      font-size: clamp(36px, 7vw, 80px);
+      letter-spacing: -0.03em;
+      line-height: 0.9;
+      text-transform: uppercase;
+      color: #ffffff;
       opacity: 0;
-      transform: translateY(30px);
-      animation: fadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      transform: translateY(20px);
+      animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.1s forwards;
     }
 
     @keyframes fadeUp {
@@ -206,6 +205,37 @@
         opacity: 1;
         transform: translateY(0);
       }
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    @keyframes scanline {
+      0% { top: 0; }
+      100% { top: 100%; }
+    }
+
+    /* Section labels */
+    .section-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.2);
+      margin-bottom: 40px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+
+    .section-label .count {
+      font-size: 9px;
+      color: rgba(255,255,255,0.12);
+      letter-spacing: 0.1em;
     }
 
     /* Projects grid */
@@ -216,7 +246,7 @@
     .projects-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
-      gap: clamp(20px, 3vw, 40px);
+      gap: 2px;
     }
 
     @media (max-width: 768px) {
@@ -226,198 +256,44 @@
     }
 
     .project-card {
-      background: rgba(255,255,255,0.03);
-      border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 16px;
+      background: #0a0a0a;
+      border: none;
       overflow: hidden;
-      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      transition: all 0.3s ease;
       text-decoration: none;
       color: inherit;
       display: block;
-      opacity: 0;
-      transform: translateY(20px);
-      animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-    }
-
-    .project-card:nth-child(1) { animation-delay: 0.1s; }
-    .project-card:nth-child(2) { animation-delay: 0.2s; }
-    .project-card:nth-child(3) { animation-delay: 0.3s; }
-
-    /* Contact section styles */
-    .contact-trigger {
-      background: none;
-      border: none;
-      color: #fff;
-      font-size: clamp(36px, 8vw, 80px);
-      font-weight: 700;
-      letter-spacing: -0.02em;
-      line-height: 0.95;
-      opacity: 0.7;
-      cursor: pointer;
-      transition: all 0.3s;
-      font-family: inherit;
-      padding: 0;
-    }
-
-    .contact-trigger:hover {
-      opacity: 1;
-    }
-
-    .footer-tagline.hidden {
-      opacity: 0;
-      pointer-events: none;
-      height: 0;
-      margin: 0;
-      padding: 0;
-      overflow: hidden;
-    }
-
-    .contact-expanded {
-      max-height: 0;
-      overflow: hidden;
-      transition: max-height 0.8s ease-out, opacity 0.5s;
-      opacity: 0;
-    }
-
-    .contact-expanded.active {
-      max-height: none;
-      opacity: 1;
-      margin-top: clamp(30px, 5vw, 50px);
-      margin-bottom: clamp(30px, 5vw, 50px);
-    }
-
-    .contact-content {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: clamp(30px, 4vw, 40px);
-    }
-
-    .contact-links {
-      display: flex;
-      flex-direction: row;
-      gap: clamp(20px, 3vw, 30px);
-      flex-wrap: wrap;
-      justify-content: center;
-    }
-
-    .contact-links-email {
-      display: flex;
-      gap: clamp(20px, 3vw, 30px);
-    }
-
-    .contact-links-social {
-      display: flex;
-      gap: clamp(20px, 3vw, 30px);
-    }
-
-    .contact-link {
-      background: transparent;
-      border: none;
-      color: #fff;
-      font-size: 14px;
-      opacity: 0.5;
-      cursor: pointer;
-      transition: all 0.3s;
-      font-family: inherit;
-      padding: 8px 0;
-      text-align: left;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      text-decoration: none;
-    }
-
-    .contact-link:hover {
-      opacity: 0.8;
-    }
-
-    .contact-link.active {
-      opacity: 1;
-      color: #4ECDC4;
-    }
-
-    .contact-link svg {
-      flex-shrink: 0;
-    }
-
-    .contact-description {
-      max-width: 600px;
-      text-align: left;
-    }
-
-    .contact-description .copied-toast {
-      font-size: 12px;
-      color: #4ECDC4;
-      margin-top: clamp(-10px, -1vw, -5px);
-      margin-bottom: clamp(30px, 4vw, 40px);
-      text-align: center;
-      opacity: 1;
-      max-height: 50px;
-      transition: opacity 0.5s ease-out, max-height 0.5s ease-out, margin 0.5s ease-out;
-    }
-
-    .contact-description .copied-toast.fade-out {
-      opacity: 0;
-      max-height: 0;
-      margin-top: 0;
-      margin-bottom: 0;
-      overflow: hidden;
-    }
-
-    /* Copy animation - cyan fill from left to right */
-    .contact-link.copying {
       position: relative;
-      background: linear-gradient(to right, #4ECDC4 50%, transparent 50%);
-      background-size: 200% 100%;
-      background-position: 100% 0;
-      -webkit-background-clip: text;
-      background-clip: text;
-      animation: copyFill 0.4s ease-out forwards;
+      opacity: 0;
+      transform: translateY(12px);
+      animation: fadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
 
-    @keyframes copyFill {
-      0% {
-        background-position: 100% 0;
-      }
-      100% {
-        background-position: 0% 0;
-      }
-    }
-
-    .contact-description p {
-      font-size: clamp(14px, 1.5vw, 15px);
-      line-height: 1.8;
-      opacity: 0.6;
-      font-weight: 300;
-      margin-bottom: 1em;
-    }
-
-    .contact-description p:last-child {
-      margin-bottom: 0;
-    }
-
-    @media (max-width: 768px) {
-      .contact-content {
-        gap: clamp(20px, 4vw, 30px);
-      }
-
-      .contact-links,
-      .contact-links-social {
-        flex-wrap: wrap;
-        justify-content: center;
-      }
-    }
+    .project-card:nth-child(1) { animation-delay: 0.05s; }
+    .project-card:nth-child(2) { animation-delay: 0.1s; }
+    .project-card:nth-child(3) { animation-delay: 0.15s; }
+    .project-card:nth-child(4) { animation-delay: 0.2s; }
+    .project-card:nth-child(5) { animation-delay: 0.25s; }
+    .project-card:nth-child(6) { animation-delay: 0.3s; }
+    .project-card:nth-child(7) { animation-delay: 0.35s; }
+    .project-card:nth-child(8) { animation-delay: 0.4s; }
 
     .project-card:hover {
-      transform: translateY(-8px);
-      border-color: rgba(255,255,255,0.15);
-      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      background: #0e0e0e;
+    }
+
+    .project-card:hover .project-info h3 {
+      color: #fff;
+    }
+
+    .project-card:hover .card-arrow {
+      opacity: 1;
+      transform: translate(0, -50%);
     }
 
     .project-thumbnail {
       aspect-ratio: 16/10;
-      background: #111;
+      background: #080808;
       position: relative;
       overflow: hidden;
     }
@@ -433,24 +309,24 @@
       pointer-events: none;
     }
 
-    /* Polarity card special styling */
+    /* Polarity card */
     .project-card.polarity .project-thumbnail {
       display: flex;
       align-items: center;
       justify-content: center;
-      background: #0A0A0A;
+      background: #080808;
     }
 
     .orbital-animation {
-      width: 200px;
-      height: 200px;
+      width: 180px;
+      height: 180px;
       position: relative;
     }
 
     .orbital-animation svg {
       width: 100%;
       height: 100%;
-      animation: spin 20s linear infinite;
+      animation: spin 25s linear infinite;
     }
 
     @keyframes spin {
@@ -463,31 +339,57 @@
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      font-weight: 300;
-      font-size: 14px;
+      font-weight: 700;
+      font-size: 11px;
       letter-spacing: 0.3em;
       text-transform: uppercase;
-      opacity: 0.6;
+      opacity: 0.4;
     }
 
     .project-info {
-      padding: clamp(20px, 3vw, 30px);
+      padding: clamp(16px, 2.5vw, 24px);
+      position: relative;
+    }
+
+    .project-info .card-type {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.15);
+      margin-bottom: 8px;
+      display: block;
     }
 
     .project-info h3 {
       font-weight: 700;
-      font-size: clamp(18px, 2vw, 22px);
-      margin-bottom: 8px;
+      font-size: clamp(16px, 1.8vw, 20px);
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+      margin-bottom: 6px;
+      color: rgba(255,255,255,0.85);
+      transition: color 0.3s;
     }
 
     .project-info p {
-      font-weight: 300;
-      font-size: 14px;
-      opacity: 0.5;
+      font-weight: 400;
+      font-size: 11px;
+      color: rgba(255,255,255,0.3);
       line-height: 1.5;
+      letter-spacing: 0.02em;
     }
 
-    /* YouTube embed styling */
+    .card-arrow {
+      position: absolute;
+      top: 50%;
+      right: clamp(16px, 2.5vw, 24px);
+      transform: translate(-4px, -50%);
+      opacity: 0;
+      transition: all 0.3s ease;
+      color: rgba(255,255,255,0.4);
+    }
+
+    /* YouTube play overlay */
     .youtube-thumbnail {
       position: relative;
       cursor: pointer;
@@ -504,10 +406,9 @@
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      width: 68px;
+      width: 48px;
       height: 48px;
-      background: #ff0000;
-      border-radius: 12px;
+      background: rgba(255,255,255,0.95);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -517,70 +418,94 @@
     .play-button::after {
       content: '';
       border-style: solid;
-      border-width: 10px 0 10px 18px;
-      border-color: transparent transparent transparent #fff;
-      margin-left: 4px;
+      border-width: 8px 0 8px 14px;
+      border-color: transparent transparent transparent #050505;
+      margin-left: 3px;
     }
 
     .project-card:hover .play-button {
-      background: #cc0000;
-      transform: translate(-50%, -50%) scale(1.1);
+      background: #fff;
+      transform: translate(-50%, -50%) scale(1.08);
     }
 
-    /* Footer section */
+    /* Divider */
+    .divider {
+      height: 1px;
+      background: rgba(255,255,255,0.06);
+      margin: clamp(60px, 10vw, 120px) 0;
+    }
+
+    /* Footer */
     .footer {
-      text-align: center;
-      padding-top: clamp(60px, 8vw, 100px);
+      padding-bottom: clamp(40px, 6vw, 80px);
+    }
+
+    .footer-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 40px;
+      margin-bottom: 60px;
     }
 
     .footer-tagline {
-      font-weight: 200;
-      font-size: clamp(14px, 2vw, 18px);
-      letter-spacing: 0.2em;
+      font-weight: 700;
+      font-size: clamp(24px, 4vw, 40px);
+      letter-spacing: -0.02em;
       text-transform: uppercase;
-      opacity: 0.3;
-      margin-bottom: clamp(60px, 10vw, 120px);
+      color: rgba(255,255,255,0.08);
+      line-height: 1;
     }
 
     .footer-links {
       display: flex;
-      justify-content: center;
-      gap: clamp(20px, 4vw, 50px);
+      gap: clamp(20px, 4vw, 40px);
       flex-wrap: wrap;
-      margin-bottom: clamp(30px, 5vw, 60px);
     }
 
     .footer-links a {
-      color: #fff;
+      color: rgba(255,255,255,0.35);
       text-decoration: none;
-      font-size: 14px;
-      opacity: 0.5;
-      transition: all 0.3s;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      transition: color 0.2s;
       display: flex;
       align-items: center;
       gap: 8px;
     }
 
     .footer-links a:hover {
-      opacity: 1;
-      color: #4ECDC4;
+      color: #fff;
+    }
+
+    .footer-bottom {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 20px;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      flex-wrap: wrap;
+      gap: 12px;
     }
 
     .footer-copyright {
-      font-size: 12px;
-      opacity: 0.2;
-      margin-top: clamp(60px, 10vw, 120px);
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.12);
     }
-
-    /* Accent colors */
-    .teal { color: #4ECDC4; }
-    .coral { color: #FFA07A; }
-    .purple { color: #BB8FCE; }
 
     /* Form message */
     .form-message {
-      font-size: 12px;
-      margin-top: 8px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-top: 6px;
       opacity: 0;
       transition: opacity 0.3s;
     }
@@ -596,13 +521,14 @@
         align-items: flex-start;
       }
 
-      .newsletter-form {
-        width: 100%;
-      }
-
       .newsletter-form input {
         flex: 1;
         min-width: 0;
+        width: 160px;
+      }
+
+      .footer-top {
+        flex-direction: column;
       }
     }
 
@@ -617,51 +543,48 @@
   </style>
 </head>
 <body>
-  <div class="backdrop"></div>
-
+  <canvas id="webgl-bg"></canvas>
   <div class="container">
-    <!-- Header with newsletter -->
+    <!-- Header -->
     <header class="header">
-      <form class="newsletter-form" id="newsletter-form">
-        <span>stay updated with my journey</span>
-        <input type="email" name="email" placeholder="enter your email" required>
-        <button type="submit" aria-label="Subscribe"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg></button>
-      </form>
-      <p id="newsletter-message" class="form-message"></p>
+      <span class="header-label">THEODORE ADDO</span>
+      <div>
+        <form class="newsletter-form" id="newsletter-form">
+          <input type="email" name="email" placeholder="EMAIL" required>
+          <button type="submit" aria-label="Subscribe"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg></button>
+        </form>
+        <p id="newsletter-message" class="form-message"></p>
+      </div>
     </header>
-
-    <!-- Hero -->
-    <section class="hero">
-      <h1>hi, I'm theo</h1>
-    </section>
 
     <!-- Projects -->
     <section class="projects-section">
+      <div class="section-label">
+        <span>SELECTED WORK</span>
+        <span class="count">8 PROJECTS</span>
+      </div>
       <div class="projects-grid">
         <!-- Polarity -->
         <a href="https://www.polarity-lab.com/" target="_blank" class="project-card polarity">
           <div class="project-thumbnail">
             <div class="orbital-animation">
               <svg viewBox="0 0 100 100">
-                <ellipse cx="50" cy="50" rx="40" ry="12" fill="none" stroke="#4ECDC4" stroke-width="1.5" transform="rotate(-60 50 50)" opacity="0.8"/>
-                <ellipse cx="50" cy="50" rx="40" ry="12" fill="none" stroke="#FFA07A" stroke-width="1.5" transform="rotate(60 50 50)" opacity="0.8"/>
-                <ellipse cx="50" cy="50" rx="40" ry="12" fill="none" stroke="#BB8FCE" stroke-width="1.5" opacity="0.8"/>
-                <circle cx="50" cy="50" r="8" fill="#4ECDC4"/>
-                <!-- Electron particles - grouped with their orbital ring using same transform -->
-                <g transform="rotate(-60 50 50)">
-                  <circle cx="90" cy="50" r="3" fill="#4ECDC4"/>
-                </g>
-                <g transform="rotate(60 50 50)">
-                  <circle cx="90" cy="50" r="3" fill="#FFA07A"/>
-                </g>
-                <circle cx="10" cy="50" r="3" fill="#BB8FCE"/>
+                <ellipse cx="50" cy="50" rx="40" ry="12" fill="none" stroke="#4ECDC4" stroke-width="1.5" transform="rotate(-60 50 50)" opacity="0.7"/>
+                <ellipse cx="50" cy="50" rx="40" ry="12" fill="none" stroke="#FFA07A" stroke-width="1.5" transform="rotate(60 50 50)" opacity="0.7"/>
+                <ellipse cx="50" cy="50" rx="40" ry="12" fill="none" stroke="#BB8FCE" stroke-width="1.5" opacity="0.7"/>
+                <circle cx="50" cy="50" r="6" fill="#4ECDC4"/>
+                <circle cx="70" cy="25" r="2.5" fill="#4ECDC4"/>
+                <circle cx="30" cy="25" r="2.5" fill="#FFA07A"/>
+                <circle cx="90" cy="50" r="2.5" fill="#BB8FCE"/>
               </svg>
-              <span class="orbital-text">polarity</span>
+              <span class="orbital-text">POLARITY</span>
             </div>
           </div>
           <div class="project-info">
-            <h3>polarity</h3>
-            <p>AI exocortex - map your brain, know yourself</p>
+            <span class="card-type">AI PLATFORM</span>
+            <h3>POLARITY</h3>
+            <p>Co-Founder. AI exocortex. Map your brain, know yourself.</p>
+            <span class="card-arrow"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M17 7H7M17 7v10"/></svg></span>
           </div>
         </a>
 
@@ -670,93 +593,148 @@
           <div class="project-thumbnail youtube-thumbnail" id="avdp-thumbnail">
             <img src="" alt="Latest AVDP Episode" id="avdp-img" style="display: none;">
             <div class="play-button"></div>
-            <div style="display: flex; align-items: center; justify-content: center; height: 100%; background: #111;">
-              <span style="opacity: 0.3; font-size: 14px;">Loading latest episode...</span>
+            <div style="display: flex; align-items: center; justify-content: center; height: 100%; background: #080808;">
+              <span style="opacity: 0.15; font-size: 10px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase;">LOADING...</span>
             </div>
           </div>
           <div class="project-info">
-            <h3 id="avdp-title">a very distant perspective</h3>
-            <p>conversations that matter - experimental interview podcast</p>
+            <span class="card-type">PODCAST</span>
+            <h3 id="avdp-title">A VERY DISTANT PERSPECTIVE</h3>
+            <p>Conversations that matter. Experimental interview format.</p>
+            <span class="card-arrow"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M17 7H7M17 7v10"/></svg></span>
+          </div>
+        </a>
+
+        <!-- Pulse -->
+        <a href="https://onpulse.tv" target="_blank" class="project-card">
+          <div class="project-thumbnail" style="background: #080808; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden;">
+            <!-- Waveform mark -->
+            <div style="position: relative; display: flex; flex-direction: column; align-items: center; gap: 12px;">
+              <img src="pulse-mark.svg" alt="Pulse" style="width: 140px; height: auto;">
+              <img src="pulse-wordmark.svg" alt="PULSE" style="width: 160px; height: auto;">
+            </div>
+            <!-- Subtle scan line -->
+            <div style="position: absolute; top: 0; left: 0; right: 0; height: 1px; background: #FF6B00; opacity: 0.15; animation: scanline 4s linear infinite;"></div>
+          </div>
+          <div class="project-info">
+            <span class="card-type">BROADCASTING NETWORK</span>
+            <h3>PULSE</h3>
+            <p>Digital broadcasting network. Live radio, DJ sets, conversations.</p>
+            <span class="card-arrow"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M17 7H7M17 7v10"/></svg></span>
+          </div>
+        </a>
+
+        <!-- WaxFeed -->
+        <a href="https://wax-feed.com" target="_blank" class="project-card">
+          <div class="project-thumbnail" style="background: #080808; display: flex; align-items: center; justify-content: center;">
+            <img src="waxfeed-disc-only.svg" alt="WaxFeed" style="width: 38%; height: auto; animation: spin 8s linear infinite;">
+          </div>
+          <div class="project-info">
+            <span class="card-type">SOCIAL PLATFORM</span>
+            <h3>WAXFEED</h3>
+            <p>Letterboxd for albums. Social music discovery.</p>
+            <span class="card-arrow"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M17 7H7M17 7v10"/></svg></span>
+          </div>
+        </a>
+
+        <!-- FONMYDJ -->
+        <a href="https://www.fonmydj.com" target="_blank" class="project-card">
+          <div class="project-thumbnail" style="background: #080808; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden;">
+            <!-- Subtle grid lines -->
+            <div style="position: absolute; inset: 0; background-image: linear-gradient(rgba(245,158,11,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(245,158,11,0.03) 1px, transparent 1px); background-size: 20px 20px;"></div>
+            <!-- Registration marks -->
+            <div style="position: absolute; top: 12px; left: 12px; width: 12px; height: 12px; border-top: 1px solid rgba(245,158,11,0.15); border-left: 1px solid rgba(245,158,11,0.15);"></div>
+            <div style="position: absolute; top: 12px; right: 12px; width: 12px; height: 12px; border-top: 1px solid rgba(245,158,11,0.15); border-right: 1px solid rgba(245,158,11,0.15);"></div>
+            <div style="position: absolute; bottom: 12px; left: 12px; width: 12px; height: 12px; border-bottom: 1px solid rgba(245,158,11,0.15); border-left: 1px solid rgba(245,158,11,0.15);"></div>
+            <div style="position: absolute; bottom: 12px; right: 12px; width: 12px; height: 12px; border-bottom: 1px solid rgba(245,158,11,0.15); border-right: 1px solid rgba(245,158,11,0.15);"></div>
+            <!-- Bold typographic logo -->
+            <img src="fonmydj-logo.svg" alt="FONMYDJ" style="width: 75%; height: auto; position: relative;">
+            <!-- Pulsing amber dot -->
+            <div style="position: absolute; bottom: 16px; right: 16px; width: 6px; height: 6px; background: #f59e0b; animation: pulse 2s ease-in-out infinite;"></div>
+          </div>
+          <div class="project-info">
+            <span class="card-type">MARKETPLACE</span>
+            <h3>FONMYDJ</h3>
+            <p>The DJ marketplace. Find your sound, book the underground.</p>
+            <span class="card-arrow"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M17 7H7M17 7v10"/></svg></span>
           </div>
         </a>
 
         <!-- 360 Sound -->
-        <a href="https://youtube.com/playlist?list=PLDbiHgLJCldhYCkz-76FjazHXO06Egv-b" target="_blank" class="project-card" id="sound360-card">
-          <div class="project-thumbnail youtube-thumbnail" id="sound360-thumbnail">
-            <img src="https://img.youtube.com/vi/y8UAFTnbQvw/maxresdefault.jpg" alt="360 Sound" id="sound360-img" onerror="this.src='https://img.youtube.com/vi/y8UAFTnbQvw/hqdefault.jpg'">
+        <a href="https://youtube.com/playlist?list=PLDbiHgLJCldhYCkz-76FjazHXO06Egv-b" target="_blank" class="project-card">
+          <div class="project-thumbnail youtube-thumbnail">
+            <img src="https://img.youtube.com/vi/532SNDV2bWI/maxresdefault.jpg" alt="360 Sound" onerror="this.src='https://img.youtube.com/vi/532SNDV2bWI/hqdefault.jpg'">
             <div class="play-button"></div>
           </div>
           <div class="project-info">
-            <h3>360 sound</h3>
-            <p>live DJ sets from scenic locations across providence</p>
+            <span class="card-type">VIDEO SERIES</span>
+            <h3>360 SOUND</h3>
+            <p>Live DJ sets from scenic locations across the globe.</p>
+            <span class="card-arrow"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M17 7H7M17 7v10"/></svg></span>
+          </div>
+        </a>
+
+        <!-- WBRU 360 -->
+        <a href="https://linktr.ee/wbru360" target="_blank" class="project-card">
+          <div class="project-thumbnail" style="background: #080808; display: flex; align-items: center; justify-content: center; padding: 40px;">
+            <img src="WBRU360-TESTSOHNE kursiv white transparent.png" alt="WBRU 360" style="width: 100%; height: auto; max-width: 260px; opacity: 0.85;">
+          </div>
+          <div class="project-info">
+            <span class="card-type">RESEARCH AND DEVELOPMENT</span>
+            <h3>WBRU 360</h3>
+            <p>Transforming college radio into multimedia studio. (June 2025 to February 2026)</p>
+            <span class="card-arrow"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M17 7H7M17 7v10"/></svg></span>
+          </div>
+        </a>
+
+        <!-- Pain Points -->
+        <a href="https://painpoints.site" target="_blank" class="project-card">
+          <div class="project-thumbnail" style="background: #080808; display: flex; align-items: center; justify-content: center;">
+            <img src="painpoints-linkedin-logo.png" alt="Pain Points" style="width: 55%; height: auto; filter: brightness(0.9);">
+          </div>
+          <div class="project-info">
+            <span class="card-type">WEB3 PLATFORM</span>
+            <h3>PAIN POINTS</h3>
+            <p>Communities fund problems, builders compete to solve them.</p>
+            <span class="card-arrow"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M17 7H7M17 7v10"/></svg></span>
           </div>
         </a>
       </div>
     </section>
 
     <!-- Footer -->
+    <div class="divider"></div>
     <footer class="footer">
-      <p class="footer-tagline" id="footer-tagline">your mountain is waiting.</p>
+      <div class="footer-top">
+        <p class="footer-tagline">YOUR MOUNTAIN<br>IS WAITING.</p>
 
-      <div class="footer-links">
-        <button class="contact-trigger" id="contact-trigger" onclick="toggleContact()">let's connect</button>
-      </div>
-
-      <!-- Expanded contact section -->
-      <div class="contact-expanded" id="contact-expanded">
-        <div class="contact-content">
-          <!-- Email contacts with descriptions -->
-          <div class="contact-links">
-            <button class="contact-link" data-contact="brown" data-email="theodore_addo@brown.edu" onclick="showContactInfo('brown')">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M3 21h18"/>
-                <path d="M5 21V7l7-4 7 4v14"/>
-                <path d="M9 21v-6h6v6"/>
-                <path d="M10 10h4"/>
-              </svg>
-              brown
-            </button>
-            <button class="contact-link" data-contact="wbru" data-email="rd@wbru.com" onclick="showContactInfo('wbru')">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10"/>
-                <circle cx="12" cy="12" r="3"/>
-              </svg>
-              wbru
-            </button>
-            <button class="contact-link" data-contact="polarity" data-email="theo@polarity-lab.com" onclick="showContactInfo('polarity')">
-              <svg width="18" height="18" viewBox="0 0 100 100">
-                <ellipse cx="50" cy="50" rx="40" ry="12" fill="none" stroke="currentColor" stroke-width="6" transform="rotate(-60 50 50)" opacity="0.8"/>
-                <ellipse cx="50" cy="50" rx="40" ry="12" fill="none" stroke="currentColor" stroke-width="6" transform="rotate(60 50 50)" opacity="0.8"/>
-                <ellipse cx="50" cy="50" rx="40" ry="12" fill="none" stroke="currentColor" stroke-width="6" opacity="0.8"/>
-                <circle cx="50" cy="50" r="10" fill="currentColor"/>
-              </svg>
-              polarity
-            </button>
-          </div>
-
-          <!-- Description area -->
-          <div class="contact-description" id="contact-description">
-          </div>
-
-          <!-- Social links (separate) -->
-          <div class="contact-links-social">
-            <a class="contact-link" href="https://github.com/taiscoding" target="_blank">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
-              </svg>
-              github
-            </a>
-            <a class="contact-link" href="https://www.linkedin.com/in/theo-addo/" target="_blank">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/>
-              </svg>
-              linkedin
-            </a>
-          </div>
+        <div class="footer-links">
+          <a href="mailto:theodore_addo@brown.edu">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+              <polyline points="22,6 12,13 2,6"/>
+            </svg>
+            EMAIL
+          </a>
+          <a href="https://github.com/taiscoding" target="_blank">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+            </svg>
+            GITHUB
+          </a>
+          <a href="https://www.linkedin.com/in/theo-addo/" target="_blank">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/>
+            </svg>
+            LINKEDIN
+          </a>
         </div>
       </div>
 
-      <p class="footer-copyright">alpert medical school, brown university - md '26</p>
+      <div class="footer-bottom">
+        <span class="footer-copyright">ALPERT MEDICAL SCHOOL, BROWN UNIVERSITY &mdash; MD '26</span>
+        <span class="footer-copyright">2026</span>
+      </div>
     </footer>
   </div>
 
@@ -770,13 +748,12 @@
         e.preventDefault();
         const email = newsletterForm.email.value;
         const button = newsletterForm.querySelector('button');
-        const originalText = button.textContent;
+        const originalContent = button.textContent;
 
         button.textContent = '...';
         button.disabled = true;
 
         try {
-          // Formspree endpoint - create yours at formspree.io
           const response = await fetch('https://formspree.io/f/xnjanerr', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -784,7 +761,7 @@
           });
 
           if (response.ok) {
-            newsletterMessage.textContent = "you're on the list!";
+            newsletterMessage.textContent = "ADDED";
             newsletterMessage.style.color = '#4ECDC4';
             newsletterMessage.classList.add('visible');
             newsletterForm.email.value = '';
@@ -792,214 +769,241 @@
             throw new Error('Failed');
           }
         } catch (err) {
-          newsletterMessage.textContent = 'something went wrong. try again.';
+          newsletterMessage.textContent = 'ERROR. TRY AGAIN.';
           newsletterMessage.style.color = '#FFA07A';
           newsletterMessage.classList.add('visible');
         }
 
-        button.textContent = originalText;
+        button.textContent = originalContent;
         button.disabled = false;
 
         setTimeout(() => {
           newsletterMessage.classList.remove('visible');
-        }, 4000);
+        }, 3000);
       });
     }
 
-    // Fetch latest YouTube videos for AVDP and 360 Sound
-    async function fetchLatestVideos() {
-      // AVDP - use channel RSS feed
-      fetchAVDPVideo();
-      // 360 Sound - use playlist
-      fetch360SoundVideo();
-    }
-
-    async function fetchAVDPVideo() {
+    // Fetch latest YouTube video
+    async function fetchLatestVideo() {
       const channelId = 'UCEdsKG3TMPbJavCJvYyUCHA';
-      const fallbackVideoId = 'Px0B7Twse1k'; // AVDP Episode 1
       const thumbnail = document.getElementById('avdp-thumbnail');
       const img = document.getElementById('avdp-img');
       const card = document.getElementById('avdp-card');
 
-      // Immediately set fallback to ensure thumbnail always shows
-      setVideoThumbnail(img, fallbackVideoId, thumbnail);
-      card.href = `https://www.youtube.com/watch?v=${fallbackVideoId}`;
-
-      // Then try to fetch the latest video in the background
       try {
-        const videoId = await getLatestVideoFromChannel(channelId);
-        if (videoId && videoId !== fallbackVideoId) {
-          setVideoThumbnail(img, videoId, thumbnail);
-          card.href = `https://www.youtube.com/watch?v=${videoId}`;
+        const videoId = await getLatestVideoId(channelId);
+
+        if (videoId) {
+          img.src = 'https://img.youtube.com/vi/' + videoId + '/maxresdefault.jpg';
+          img.style.display = 'block';
+          img.onerror = function() {
+            img.src = 'https://img.youtube.com/vi/' + videoId + '/hqdefault.jpg';
+          };
+          card.href = 'https://www.youtube.com/watch?v=' + videoId;
+
+          const loadingEl = thumbnail.querySelector('div:last-child');
+          if (loadingEl && loadingEl.textContent.indexOf('LOADING') !== -1) {
+            loadingEl.style.display = 'none';
+          }
         }
       } catch (err) {
-        console.log('AVDP fetch failed, using fallback:', err);
+        console.log('Could not fetch latest video:', err);
       }
     }
 
-    async function fetch360SoundVideo() {
-      const playlistId = 'PLDbiHgLJCldhYCkz-76FjazHXO06Egv-b';
-      const fallbackVideoId = 'y8UAFTnbQvw'; // Current fallback
-      const img = document.getElementById('sound360-img');
-      const card = document.getElementById('sound360-card');
-
+    async function getLatestVideoId(channelId) {
       try {
-        const videoId = await getLatestVideoFromPlaylist(playlistId) || fallbackVideoId;
-        img.src = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
-        img.onerror = () => {
-          img.src = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
-        };
-        card.href = `https://www.youtube.com/watch?v=${videoId}&list=${playlistId}`;
-      } catch (err) {
-        console.log('360 Sound fetch failed, keeping fallback:', err);
-      }
-    }
-
-    function setVideoThumbnail(img, videoId, container) {
-      img.src = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
-      img.style.display = 'block';
-      img.onerror = () => {
-        img.src = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
-      };
-      // Remove loading text if present
-      if (container) {
-        const loadingEl = container.querySelector('div:last-child');
-        if (loadingEl && loadingEl.textContent.includes('Loading')) {
-          loadingEl.style.display = 'none';
-        }
-      }
-    }
-
-    async function getLatestVideoFromChannel(channelId) {
-      try {
-        const rssUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`;
-        const proxyUrl = `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(rssUrl)}`;
-
+        const rssUrl = 'https://www.youtube.com/feeds/videos.xml?channel_id=' + channelId;
+        const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(rssUrl);
         const response = await fetch(proxyUrl);
         const text = await response.text();
-
         const parser = new DOMParser();
         const xml = parser.parseFromString(text, 'text/xml');
         const entries = xml.querySelectorAll('entry');
 
         if (entries.length > 0) {
-          const videoIdEl = entries[0].querySelector('yt\\:videoId, videoId');
-          if (videoIdEl) return videoIdEl.textContent;
-        }
-        return null;
-      } catch (err) {
-        console.log('Channel RSS fetch failed:', err);
-        return null;
-      }
-    }
-
-    async function getLatestVideoFromPlaylist(playlistId) {
-      try {
-        const playlistUrl = `https://www.youtube.com/playlist?list=${playlistId}`;
-        const proxyUrl = `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(playlistUrl)}`;
-
-        const response = await fetch(proxyUrl);
-        const text = await response.text();
-
-        // Extract first video ID from playlist page
-        const videoIdMatch = text.match(/\"videoId\":\"([a-zA-Z0-9_-]{11})\"/);
-        if (videoIdMatch && videoIdMatch[1]) {
-          return videoIdMatch[1];
-        }
-        return null;
-      } catch (err) {
-        console.log('Playlist fetch failed:', err);
-        return null;
-      }
-    }
-
-    // Initialize
-    fetchLatestVideos();
-
-    // Contact section functionality
-    const contactExpanded = document.getElementById('contact-expanded');
-    const contactDescription = document.getElementById('contact-description');
-    const contactLinks = document.querySelectorAll('.contact-link[data-contact]');
-    const contactPlaceholder = document.getElementById('contact-placeholder');
-    const contactContent = document.querySelector('.contact-content');
-
-    // Contact info content
-    const contactInfo = {
-      brown: {
-        description: `I grew up doing science experiments and fairs, but formal research started at UMBC in Rachel Brewster's developmental neurobiology lab, studying how zebrafish survive low oxygen environments. In 2020, I interned at MIT in Ed Boyden's lab, working on whole brain imaging and trying to link kin recognition behavior in zebrafish to actual molecular processes. That's what stuck with me: how do you bridge the gap between what you can observe and what's actually happening in the tissue?
-
-Ed pioneered expansion microscopy, but the limitation was invasiveness. That's the challenge of all brain research: the brain lives in a protective casing that intentionally separates it from the outside world. Most efforts fail because once you make contact, the person is no longer awake. Radiology became the answer to that question for me. It's the closest we have to studying the living brain non-invasively, a window into the body at a level we don't typically access while someone is still conscious and functioning.
-
-I'm applying for diagnostic radiology residency because I want to be at the intersection of what we can observe and what's actually happening in tissue. The human side informs my systems thinking, and I'm drawn to programs that value both technical precision and the ability to see the bigger picture. If you're interested in talking about radiology, residency, or how research shapes clinical thinking, reach out.`,
-        email: 'theodore_addo@brown.edu'
-      },
-      wbru: {
-        description: `When I joined WBRU this summer, I told them I wanted to do anything. I have a sharp ability to detect friction in a workplace, confront it, and design systems to solve it. I noticed immediately that WBRU had space to offer creatives but struggled with continuity: new students every semester, no one staying longer than four years.
-
-One semester in, I started AVDP (A Very Distant Perspective), a podcast with long-form conversations that documents the creative process, not just the finished product. I laid the groundwork for Pain Points, the artist-in-residence incubator where we bring artists into WBRU, give them space and resources to work, and use AVDP to share their progress with audiences. I advanced the 360 sound DJ sets, started hosting artist exhibits, recruited students, fostered connections with community DJs, and began creating infrastructure within the station again.
-
-The artist-in-residence program matters to me personally because it allows artists space to be fully themselves without worrying about cost. R&D and creativity are both about innovation, and I think the R&D role is essential for any creative space. Pushing the needle has always been the most important factor. If you're an artist interested in the residency program, want to be a guest on AVDP, or have a creative project you'd like to collaborate on, let's talk.`,
-        email: 'rd@wbru.com'
-      },
-      polarity: {
-        description: `The first time I built something that made me realize "oh, this works" was back when Polarity was running off paper and pencil. I had become suspicious of the way the brain connects information. I believed that information you engage with in relation to the same location or type of music is likely more closely related in the brain than information you don't, so I began keeping to-do and notes lists within every room in my home to see if patterns arose. It helped me get organized, but like all manual systems, it became too much to handle.
-
-Now Polarity listens, responds, and organizes what you say to engage with later. You talk to Polarity like you're thinking out loud. It captures what you say, organizes it into a knowledge graph (concepts, connections, tasks, ideas), and surfaces relevant information back when you need it. If you mention "zebrafish" today and "brain imaging" next week, Polarity connects them because they're part of the same conceptual territory. It's externalizing how the brain naturally organizes information so you can see the structure of your own thinking.
-
-Polarity feels effortless because to most accurately map the brain, it needs to feel like thoughts are just flowing. That conversational data reveals patterns in how the Default Mode Network organizes knowledge, which can eventually be correlated with actual brain imaging. The gap between internal understanding and external articulation closes when you can externalize cognitive patterns and see them. If you're interested in research collaboration, computational psychiatry, early access, or just want to talk about how we instrument cognition, reach out.`,
-        email: 'theo@polarity-lab.com'
-      }
-    };
-
-    function toggleContact() {
-      // Toggle the expanded section
-      contactExpanded.classList.toggle('active');
-
-      if (!contactExpanded.classList.contains('active')) {
-        // Reset active states when closing
-        contactLinks.forEach(link => link.classList.remove('active'));
-        contactDescription.innerHTML = '';
-      }
-    }
-
-    function showContactInfo(type) {
-      const info = contactInfo[type];
-      if (!info) return;
-
-      // Update active state, copy email, and trigger animation
-      contactLinks.forEach(link => {
-        if (link.dataset.contact === type) {
-          link.classList.add('active');
-
-          // Trigger copy animation
-          link.classList.remove('copying');
-          void link.offsetWidth; // Force reflow to restart animation
-          link.classList.add('copying');
-
-          // Copy email to clipboard
-          if (link.dataset.email) {
-            navigator.clipboard.writeText(link.dataset.email);
+          const latestEntry = entries[0];
+          const videoIdEl = latestEntry.querySelector('yt\\:videoId, videoId');
+          if (videoIdEl) {
+            return videoIdEl.textContent;
           }
-        } else {
-          link.classList.remove('active');
-          link.classList.remove('copying');
         }
-      });
-
-      // Update description with copied toast
-      contactDescription.innerHTML = `
-        <div class="copied-toast">${info.email} copied</div>
-        <p>${info.description}</p>
-      `;
-
-      // Fade out the toast after 2 seconds
-      setTimeout(() => {
-        const toast = contactDescription.querySelector('.copied-toast');
-        if (toast) {
-          toast.classList.add('fade-out');
-        }
-      }, 2000);
+        return null;
+      } catch (err) {
+        console.log('RSS fetch failed:', err);
+        return null;
+      }
     }
+
+    fetchLatestVideo();
+  </script>
+
+  <!-- WASM + Raw WebGL Background (Rust particle engine) -->
+  <script type="module">
+    import init, { ParticleSystem } from './wasm-pkg/wasm_particles.js';
+
+    (async function() {
+      await init();
+
+      var canvas = document.getElementById('webgl-bg');
+      if (!canvas) return;
+
+      var gl = canvas.getContext('webgl', { alpha: true, antialias: true, premultipliedAlpha: false });
+      if (!gl) return;
+
+      var PARTICLE_COUNT = 3000;
+      var sys = new ParticleSystem(PARTICLE_COUNT);
+
+      // Shaders
+      var vsSource = [
+        'attribute vec3 aPosition;',
+        'attribute float aSize;',
+        'attribute float aAlpha;',
+        'uniform vec2 uResolution;',
+        'uniform float uPixelRatio;',
+        'varying float vAlpha;',
+        'void main() {',
+        '  float depth = 1.0 / (1.0 - aPosition.z * 0.05);',
+        '  vec2 pos = aPosition.xy * depth;',
+        '  gl_Position = vec4(pos.x / (uResolution.x / uResolution.y), pos.y, 0.0, 1.0);',
+        '  gl_PointSize = aSize * depth * uPixelRatio * 1.5;',
+        '  vAlpha = aAlpha * 0.4;',
+        '}'
+      ].join('\n');
+
+      var fsSource = [
+        'precision mediump float;',
+        'varying float vAlpha;',
+        'void main() {',
+        '  float d = length(gl_PointCoord - vec2(0.5));',
+        '  if (d > 0.5) discard;',
+        '  float glow = exp(-d * d * 12.0);',
+        '  gl_FragColor = vec4(1.0, 1.0, 1.0, glow * vAlpha);',
+        '}'
+      ].join('\n');
+
+      function compileShader(type, source) {
+        var shader = gl.createShader(type);
+        gl.shaderSource(shader, source);
+        gl.compileShader(shader);
+        return shader;
+      }
+
+      var vs = compileShader(gl.VERTEX_SHADER, vsSource);
+      var fs = compileShader(gl.FRAGMENT_SHADER, fsSource);
+      var program = gl.createProgram();
+      gl.attachShader(program, vs);
+      gl.attachShader(program, fs);
+      gl.linkProgram(program);
+      gl.useProgram(program);
+
+      var aPosition = gl.getAttribLocation(program, 'aPosition');
+      var aSize = gl.getAttribLocation(program, 'aSize');
+      var aAlpha = gl.getAttribLocation(program, 'aAlpha');
+      var uResolution = gl.getUniformLocation(program, 'uResolution');
+      var uPixelRatio = gl.getUniformLocation(program, 'uPixelRatio');
+
+      // Buffers
+      var posBuf = gl.createBuffer();
+      var sizeBuf = gl.createBuffer();
+      var alphaBuf = gl.createBuffer();
+
+      // Pre-allocate typed arrays
+      var posData = new Float32Array(PARTICLE_COUNT * 3);
+      var sizeData = new Float32Array(PARTICLE_COUNT);
+      var alphaData = new Float32Array(PARTICLE_COUNT);
+
+      // Mouse
+      var mouse = { x: 0, y: 0, tx: 0, ty: 0, active: false };
+      document.addEventListener('mousemove', function(e) {
+        mouse.tx = (e.clientX / window.innerWidth - 0.5) * 2;
+        mouse.ty = -(e.clientY / window.innerHeight - 0.5) * 2;
+        mouse.active = true;
+      });
+      document.addEventListener('mouseleave', function() { mouse.active = false; });
+
+      // Scroll
+      var scrollY = 0;
+      window.addEventListener('scroll', function() { scrollY = window.scrollY; }, { passive: true });
+
+      // Resize
+      function resize() {
+        var dpr = Math.min(window.devicePixelRatio, 2);
+        canvas.width = window.innerWidth * dpr;
+        canvas.height = window.innerHeight * dpr;
+        canvas.style.width = window.innerWidth + 'px';
+        canvas.style.height = window.innerHeight + 'px';
+        gl.viewport(0, 0, canvas.width, canvas.height);
+        sys.set_size(window.innerWidth, window.innerHeight);
+      }
+      resize();
+      window.addEventListener('resize', resize);
+
+      // Blend
+      gl.enable(gl.BLEND);
+      gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+      gl.disable(gl.DEPTH_TEST);
+
+      var lastTime = 0;
+
+      function frame(now) {
+        requestAnimationFrame(frame);
+        var dt = Math.min((now - lastTime) / 1000, 0.05);
+        lastTime = now;
+
+        // Smooth mouse
+        mouse.x += (mouse.tx - mouse.x) * 0.06;
+        mouse.y += (mouse.ty - mouse.y) * 0.06;
+
+        // Update WASM simulation
+        sys.set_mouse(mouse.x, mouse.y, mouse.active);
+        sys.set_scroll(scrollY);
+        sys.tick(dt);
+
+        // Get render data from Rust
+        var renderData = sys.get_render_data();
+
+        // Unpack interleaved data [x, y, z, size, alpha] per particle
+        for (var i = 0; i < PARTICLE_COUNT; i++) {
+          var off = i * 5;
+          posData[i * 3] = renderData[off];
+          posData[i * 3 + 1] = renderData[off + 1];
+          posData[i * 3 + 2] = renderData[off + 2];
+          sizeData[i] = renderData[off + 3];
+          alphaData[i] = renderData[off + 4];
+        }
+
+        // Clear
+        gl.clearColor(0.0196, 0.0196, 0.0196, 1.0);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+
+        gl.useProgram(program);
+        gl.uniform2f(uResolution, canvas.width, canvas.height);
+        gl.uniform1f(uPixelRatio, Math.min(window.devicePixelRatio, 2));
+
+        // Upload positions
+        gl.bindBuffer(gl.ARRAY_BUFFER, posBuf);
+        gl.bufferData(gl.ARRAY_BUFFER, posData, gl.DYNAMIC_DRAW);
+        gl.enableVertexAttribArray(aPosition);
+        gl.vertexAttribPointer(aPosition, 3, gl.FLOAT, false, 0, 0);
+
+        // Upload sizes
+        gl.bindBuffer(gl.ARRAY_BUFFER, sizeBuf);
+        gl.bufferData(gl.ARRAY_BUFFER, sizeData, gl.DYNAMIC_DRAW);
+        gl.enableVertexAttribArray(aSize);
+        gl.vertexAttribPointer(aSize, 1, gl.FLOAT, false, 0, 0);
+
+        // Upload alphas
+        gl.bindBuffer(gl.ARRAY_BUFFER, alphaBuf);
+        gl.bufferData(gl.ARRAY_BUFFER, alphaData, gl.DYNAMIC_DRAW);
+        gl.enableVertexAttribArray(aAlpha);
+        gl.vertexAttribPointer(aAlpha, 1, gl.FLOAT, false, 0, 0);
+
+        gl.drawArrays(gl.POINTS, 0, PARTICLE_COUNT);
+      }
+
+      requestAnimationFrame(frame);
+    })();
   </script>
 </body>
 </html>
