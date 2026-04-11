@@ -1,0 +1,14 @@
+name = "theoaddo-com"
+pages_build_output_dir = "."
+
+[[d1_databases]]
+binding = "THEO_OS_DB"
+database_name = "theo_os_db"
+database_id = "REPLACE_AFTER_CREATION"
+
+[[kv_namespaces]]
+binding = "THEO_OS_KV"
+id = "REPLACE_AFTER_CREATION"
+
+[vars]
+ENVIRONMENT = "production"
