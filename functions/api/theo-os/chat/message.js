@@ -192,7 +192,8 @@ async function executeTool(name, input, env) {
 
     case 'update_task': {
       const { id, status, area, notes } = input;
-      if (!id) return { error: 'id is required' };
+      const taskId = Number(id);
+      if (id == null || isNaN(taskId)) return { error: 'id is required' };
       const sets = [];
       const binds = [];
       if (status !== undefined) { sets.push('status = ?'); binds.push(status); }
@@ -200,7 +201,7 @@ async function executeTool(name, input, env) {
       if (notes !== undefined) { sets.push('notes = ?'); binds.push(notes); }
       if (sets.length === 0) return { error: 'no fields to update' };
       sets.push(`updated_at = datetime('now')`);
-      binds.push(id);
+      binds.push(taskId);
       const { results } = await env.THEO_OS_DB.prepare(
         `UPDATE tasks SET ${sets.join(', ')} WHERE id = ? RETURNING *`
       ).bind(...binds).all();
@@ -401,8 +402,11 @@ export async function onRequestPost(context) {
           { role: 'assistant', content: response.content },
           { role: 'user', content: toolResults }
         ];
+        // On the last round, make one final call to get a text response
+        if (round === 2) {
+          response = await callAnthropic(messages, systemPrompt, TOOLS, env);
+        }
       } else {
-        // unexpected stop reason, break
         break;
       }
     }
