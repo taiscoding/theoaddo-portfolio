@@ -34,9 +34,10 @@ export async function onRequestPost({ request, env }) {
   let slippedTasks = [];
   let weekInsights = [];
   let noProgressGoals = [];
+  let fadedKnowledge = [];
 
   try {
-    const [completedRes, slippedRes, insightsRes, goalsRes] = await Promise.all([
+    const [completedRes, slippedRes, insightsRes, goalsRes, knowledgeRes] = await Promise.all([
       env.THEO_OS_DB.prepare(
         `SELECT title, area, updated_at FROM tasks
          WHERE status = 'done' AND updated_at >= ?
@@ -63,13 +64,20 @@ export async function onRequestPost({ request, env }) {
            WHERE status = 'done' AND updated_at >= ? AND goal_id IS NOT NULL
          )
          ORDER BY g.area ASC LIMIT 10`
-      ).bind(sevenDaysAgo).all()
+      ).bind(sevenDaysAgo).all(),
+
+      env.THEO_OS_DB.prepare(
+        `SELECT title, depth, decay_score, area FROM knowledge_notes
+         WHERE next_review <= ? OR decay_score < 0.5
+         ORDER BY decay_score ASC LIMIT 5`
+      ).bind(today).all().catch(() => ({ results: [] }))
     ]);
 
     completedTasks = completedRes.results || [];
     slippedTasks = slippedRes.results || [];
     weekInsights = insightsRes.results || [];
     noProgressGoals = goalsRes.results || [];
+    fadedKnowledge = knowledgeRes.results || [];
   } catch (e) {
     // Proceed with empty context if DB queries fail
   }
@@ -112,19 +120,24 @@ Do not ask about things already well-understood. Probe the areas where patterns 
 Keep questions grounded — reference real data when available. Be direct, not motivational.
 Your response should be ONLY a JSON object with two fields: "question" (the Step 1 question string) and "context" (a brief 2-3 sentence context summary of what the system found this week).`;
 
+  const knowledgeSummary = fadedKnowledge.length > 0
+    ? fadedKnowledge.map(k => `${k.title} (${k.depth}, decay: ${k.decay_score?.toFixed(2) ?? '?'})`).join(', ')
+    : 'none';
+
   const userPrompt = `Generate the Step 1 opening question for Theo's weekly review.
 
 Completed tasks this week: ${completedSummary}
 Slipped tasks (overdue): ${slippedTasks.length > 0 ? slippedTasks.map(t => t.title).join(', ') : 'none'}
 Insights this week: ${weekInsights.length > 0 ? weekInsights.map(i => i.insight).join(' | ') : 'none'}
 Goals with no progress: ${noProgressGoals.length > 0 ? noProgressGoals.map(g => g.title).join(', ') : 'none'}
+Knowledge areas faded this week: ${knowledgeSummary}
 
 The Step 1 question should ask: "Looking at this week, what did you complete across each area of your life? Here's what the system tracked: [list of completed tasks by area, or 'nothing recorded yet']"
 
-Make the question personal and specific to the data. The context field should briefly summarize what the system found (tasks done, slipped, patterns surfaced).`;
+Make the question personal and specific to the data. The context field should briefly summarize what the system found (tasks done, slipped, patterns surfaced, knowledge areas faded if any).`;
 
   let question = `Looking at this week, what did you complete across each area of your life? Here's what the system tracked: ${completedSummary}.`;
-  let context = `The system found ${completedTasks.length} completed task(s) this week${slippedTasks.length > 0 ? `, ${slippedTasks.length} slipped task(s)` : ''}${weekInsights.length > 0 ? `, and ${weekInsights.length} behavioral pattern(s) surfaced` : ''}.`;
+  let context = `The system found ${completedTasks.length} completed task(s) this week${slippedTasks.length > 0 ? `, ${slippedTasks.length} slipped task(s)` : ''}${weekInsights.length > 0 ? `, and ${weekInsights.length} behavioral pattern(s) surfaced` : ''}${fadedKnowledge.length > 0 ? `. ${fadedKnowledge.length} knowledge area(s) have faded since last week` : ''}.`;
 
   try {
     const aiRes = await callAnthropic(
@@ -157,7 +170,8 @@ Make the question personal and specific to the data. The context field should br
       // Pass full data so next.js can use it in subsequent steps
       slippedTasks: slippedTasks.slice(0, 10),
       weekInsights: weekInsights.slice(0, 5),
-      noProgressGoals: noProgressGoals.slice(0, 5)
+      noProgressGoals: noProgressGoals.slice(0, 5),
+      fadedKnowledge: fadedKnowledge.slice(0, 5)
     }
   });
 }
