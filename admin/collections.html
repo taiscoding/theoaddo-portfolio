@@ -414,7 +414,7 @@
         <div class="expand-inner">
           <div>
             <label class="expand-label" for="expand-notes-${item.id}">Notes</label>
-            <textarea class="expand-input" id="expand-notes-${item.id}" rows="4">${esc(item.notes || '')}</textarea>
+            <textarea class="expand-input" id="expand-notes-${item.id}" rows="4"></textarea>
             <span class="save-indicator" id="save-ind-notes-${item.id}">Saved</span>
           </div>
           <div>
@@ -432,16 +432,21 @@
     // Insert after the card
     card.insertAdjacentElement('afterend', panel);
 
-    // Auto-save on blur for notes
+    // Set textarea value via JS to avoid HTML entity encoding issues
     const notesEl = panel.querySelector(`#expand-notes-${item.id}`);
+    notesEl.value = item.notes || '';
+
+    // Auto-save on blur for notes
     notesEl.addEventListener('blur', async () => {
       const val = notesEl.value.trim() || null;
       if (val === (item.notes || null)) return;
       const updated = await apiPatch(`/api/theo-os/collections/${item.id}`, { notes: val });
       if (updated) {
         const idx = allItems.findIndex(i => i.id === item.id);
-        if (idx !== -1) allItems[idx] = updated;
-        showSaved(`save-ind-notes-${item.id}`);
+        if (idx !== -1) { allItems[idx] = updated; item = updated; }
+        showSaved(`save-ind-notes-${item.id}`, false);
+      } else {
+        showSaved(`save-ind-notes-${item.id}`, true);
       }
     });
 
@@ -453,8 +458,10 @@
       const updated = await apiPatch(`/api/theo-os/collections/${item.id}`, { source: val });
       if (updated) {
         const idx = allItems.findIndex(i => i.id === item.id);
-        if (idx !== -1) allItems[idx] = updated;
-        showSaved(`save-ind-source-${item.id}`);
+        if (idx !== -1) { allItems[idx] = updated; item = updated; }
+        showSaved(`save-ind-source-${item.id}`, false);
+      } else {
+        showSaved(`save-ind-source-${item.id}`, true);
       }
     });
 
@@ -489,9 +496,11 @@
     });
   }
 
-  function showSaved(indicatorId) {
+  function showSaved(indicatorId, isError = false) {
     const el = document.getElementById(indicatorId);
     if (!el) return;
+    el.textContent = isError ? 'Save failed' : 'Saved';
+    el.style.color = isError ? 'var(--coral)' : 'var(--teal)';
     el.classList.add('visible');
     setTimeout(() => el.classList.remove('visible'), 1500);
   }
