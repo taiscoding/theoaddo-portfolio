@@ -129,3 +129,18 @@ export const AREAS = [
   'work', 'finances', 'health', 'relationships',
   'growth', 'creative', 'exploration', 'life'
 ];
+
+export async function loadMemoryContext(env) {
+  try {
+    const { results } = await env.THEO_OS_DB.prepare(
+      `SELECT type, content, area FROM memories WHERE confidence > 0.6
+       ORDER BY type, confidence DESC LIMIT 15`
+    ).all();
+    const facts = results.filter(m => m.type === 'fact').map(m => m.content).join('; ') || 'none';
+    const patterns = results.filter(m => m.type === 'pattern').map(m => m.content).join('; ') || 'none';
+    const preferences = results.filter(m => m.type === 'preference').map(m => m.content).join('; ') || 'none';
+    return { facts, patterns, preferences };
+  } catch (_) {
+    return { facts: 'none', patterns: 'none', preferences: 'none' };
+  }
+}

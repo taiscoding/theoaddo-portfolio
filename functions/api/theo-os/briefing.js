@@ -1,4 +1,4 @@
-import { json, err, requireAdmin } from './_utils.js';
+import { json, err, requireAdmin, loadMemoryContext } from './_utils.js';
 
 export async function onRequestGet({ request, env }) {
   if (!await requireAdmin(request, env)) return err('Unauthorized', 401);
@@ -12,6 +12,8 @@ export async function onRequestGet({ request, env }) {
 export async function onRequestPost({ request, env }) {
   if (!await requireAdmin(request, env)) return err('Unauthorized', 401);
   const today = new Date().toISOString().split('T')[0];
+
+  const memory = await loadMemoryContext(env);
 
   const [overdue, dueToday, upcomingGoals, overduePeople] = await Promise.all([
     env.THEO_OS_DB.prepare(`SELECT title, area FROM tasks WHERE status != 'done' AND due_date IS NOT NULL AND due_date < ?`).bind(today).all(),
@@ -41,7 +43,14 @@ export async function onRequestPost({ request, env }) {
       messages: [{
         role: 'user',
         content: `Generate a morning briefing for Theo. Be direct and useful, not performative.
-Data: ${JSON.stringify(context, null, 2)}
+
+What you know about Theo:
+- Patterns: ${memory.patterns}
+- Preferences: ${memory.preferences}
+
+Use this to calibrate tone and emphasis. If patterns show stress or avoidance, acknowledge it briefly. Don't mention the memory system explicitly.
+
+Context: ${JSON.stringify(context, null, 2)}
 
 Write 2-3 short paragraphs. First: what today looks like (tasks due, overdue items).
 Second: what needs attention (relationships, upcoming deadlines).
