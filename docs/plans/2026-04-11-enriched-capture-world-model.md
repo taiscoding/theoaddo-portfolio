@@ -151,16 +151,19 @@ ALTER TABLE memories ADD COLUMN emotional_score REAL DEFAULT 0.0;
 
 ## Knowledge Graph Visual Model
 
-The graph renders the world model visually. Node size and luminosity are proportional to weight. Edge thickness reflects connection strength. Dense clusters form canopies — these are the areas of the user's life with the most activity and interconnection.
+The graph renders the world model visually as a personal universe — a star system of the self. The existing void aesthetic (deep black, teal luminance) maps directly onto this.
 
-The forest metaphor governs all visual decisions:
-- High-weight nodes: larger, brighter, more prominent
-- Low-weight nodes: smaller, dimmer, present but not dominant
-- Dense clusters: organic grouping, not forced layout
-- Isolated nodes: clearly peripheral, prompts to connect them
-- Weight decay visible over time — nodes that haven't been touched grow dimmer
+Node size and luminosity are proportional to weight. Edge thickness reflects connection strength. Dense clusters are nebulae — regions of high activity where things are actively forming and connecting.
 
-This is the view of the forest from above. The user cannot see this shape from inside their own life — the system shows it to them.
+The spatial metaphor governs all visual decisions:
+- High-weight nodes: larger, brighter, gravitational — stars that pull connections toward them
+- Low-weight nodes: smaller, dim, peripheral — distant objects not yet fully in view
+- Edges: light trails between stars, thickness = connection strength, recency = brightness
+- Dense clusters: nebulae, organically grouped, not forced into a grid
+- Isolated nodes: visibly adrift, prompting the system to find where they belong
+- Weight decay: nodes that haven't been touched gradually dim — stars cooling at the edge of the system
+
+This is the user's universe rendered from outside. The user cannot see the shape of their own world from inside it — the system holds that perspective and shows it back to them.
 
 ---
 
