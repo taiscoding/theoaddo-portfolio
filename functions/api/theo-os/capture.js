@@ -1,6 +1,6 @@
-import { json, err, requireAdmin } from './_utils.js';
+import { json, err, requireAdmin, loadMemoryContext } from './_utils.js';
 
-const CAPTURE_SYSTEM = `You are the routing intelligence for Theo OS, a personal life OS.
+const CAPTURE_SYSTEM_BASE = `You are the routing intelligence for Theo OS, a personal life OS.
 Parse a single natural-language capture and route it to the correct data type.
 
 Respond with a JSON object ONLY (no markdown, no explanation):
@@ -28,6 +28,16 @@ Rules:
 
 export async function onRequestPost({ request, env }) {
   if (!await requireAdmin(request, env)) return err('Unauthorized', 401);
+
+  const memory = await loadMemoryContext(env);
+
+  const CAPTURE_SYSTEM = `${CAPTURE_SYSTEM_BASE}
+
+Known context about Theo to improve routing accuracy:
+- Facts: ${memory.facts}
+- Patterns: ${memory.patterns}
+
+Use this to infer intent when the capture is ambiguous (e.g. if patterns show he avoids finances, a vague capture about "money stuff" should route as a task with area=finances, not someday).`;
 
   const body = await request.json().catch(() => ({}));
   const { text } = body;
