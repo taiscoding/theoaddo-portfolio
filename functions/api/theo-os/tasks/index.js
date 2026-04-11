@@ -1,4 +1,6 @@
-import { json, err, requireAdmin } from '../_utils.js';
+import { json, err, requireAdmin, AREAS } from '../_utils.js';
+
+const VALID_STATUSES = ['inbox', 'today', 'this_week', 'later', 'someday'];
 
 export async function onRequestGet({ request, env }) {
   if (!await requireAdmin(request, env)) return err('Unauthorized', 401);
@@ -38,11 +40,15 @@ export async function onRequestPost({ request, env }) {
   const { title, area, status, due_date, notes, goal_id } = body;
   if (!title || !title.trim()) return err('title is required');
 
+  if (status !== undefined && !VALID_STATUSES.includes(status)) return err('Invalid status');
+  if (area !== undefined && !AREAS.includes(area)) return err('Invalid area');
+
   const taskStatus = status || 'inbox';
 
-  const result = await env.THEO_OS_DB.prepare(`
+  const { results } = await env.THEO_OS_DB.prepare(`
     INSERT INTO tasks (title, area, status, due_date, notes, goal_id)
     VALUES (?, ?, ?, ?, ?, ?)
+    RETURNING *
   `).bind(
     title.trim(),
     area || null,
@@ -50,11 +56,7 @@ export async function onRequestPost({ request, env }) {
     due_date || null,
     notes || null,
     goal_id || null
-  ).run();
+  ).all();
 
-  const task = await env.THEO_OS_DB.prepare(
-    'SELECT * FROM tasks WHERE id = ?'
-  ).bind(result.meta.last_row_id).first();
-
-  return json(task, 201);
+  return json(results[0], 201);
 }

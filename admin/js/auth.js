@@ -64,6 +64,15 @@ async function apiPut(path, body) {
   return res.json();
 }
 
+async function apiPatch(path, body) {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: 'PATCH', headers: authHeaders(), body: JSON.stringify(body)
+  });
+  if (res.status === 401) { clearToken(); window.location.href = '/admin/index.html'; return null; }
+  if (!res.ok) return null;
+  return res.json();
+}
+
 async function apiDelete(path) {
   const res = await fetch(`${API_BASE}${path}`, { method: 'DELETE', headers: authHeaders() });
   if (res.status === 401) { clearToken(); window.location.href = '/admin/index.html'; return null; }

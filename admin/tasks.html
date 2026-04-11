@@ -417,12 +417,7 @@
   }
 
   async function createTask(fields) {
-    const res = await fetch('/api/theo-os/tasks', {
-      method: 'POST', headers: authHeaders(), body: JSON.stringify(fields)
-    });
-    if (res.status === 401) { clearToken(); window.location.href = '/admin/index.html'; return null; }
-    if (!res.ok) return null;
-    return res.json();
+    return apiPost('/api/theo-os/tasks', fields);
   }
 
   async function deleteTask(id) {
@@ -430,16 +425,6 @@
     if (!ok) return;
     allTasks = allTasks.filter(t => t.id !== id);
     renderBoard();
-  }
-
-  // apiPatch helper (not in auth.js)
-  async function apiPatch(path, body) {
-    const res = await fetch(path, {
-      method: 'PATCH', headers: authHeaders(), body: JSON.stringify(body)
-    });
-    if (res.status === 401) { clearToken(); window.location.href = '/admin/index.html'; return null; }
-    if (!res.ok) return null;
-    return res.json();
   }
 
   // ---- Modal ----
@@ -507,27 +492,30 @@
     saveBtn.disabled = true;
     saveBtn.textContent = 'Saving...';
 
-    const fields = {
-      title,
-      area: fieldArea.value || null,
-      status: fieldStatus.value || 'inbox',
-      due_date: fieldDue.value || null,
-      notes: fieldNotes.value.trim() || null,
-    };
+    try {
+      const fields = {
+        title,
+        area: fieldArea.value || null,
+        status: fieldStatus.value || 'inbox',
+        due_date: fieldDue.value || null,
+        notes: fieldNotes.value.trim() || null,
+      };
 
-    if (editingId) {
-      await patchTask(editingId, fields);
-    } else {
-      const created = await createTask(fields);
-      if (created) {
-        allTasks.unshift(created);
-        renderBoard();
+      if (editingId) {
+        await patchTask(editingId, fields);
+      } else {
+        const created = await createTask(fields);
+        if (created) {
+          allTasks.unshift(created);
+          renderBoard();
+        }
       }
-    }
 
-    saveBtn.disabled = false;
-    saveBtn.textContent = 'Save';
-    closeModal();
+      closeModal();
+    } finally {
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Save';
+    }
   });
 
   deleteBtn.addEventListener('click', async () => {
