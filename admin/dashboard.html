@@ -182,8 +182,9 @@
           <span><span class="dot dot-teal"></span><span style="font-size:12px;color:var(--teal);font-family:var(--font-mono)">active</span></span>
         </div>
         <div class="agent-status">Runs on demand. Pulls unread Gmail threads and drafts replies for your review.</div>
-        <div style="margin-top:12px">
+        <div style="margin-top:12px;display:flex;gap:12px;align-items:center">
           <a href="/admin/email.html" class="mini-link">Open triage →</a>
+          <a href="/api/theo-os/auth/google/connect" id="google-connect-link" class="mini-link" style="display:none">Connect Google →</a>
         </div>
       </div>
       <div class="agent-card">
@@ -567,6 +568,13 @@
   }
 
   load();
+
+  // Show "Connect Google" link if not connected
+  apiGet('/api/theo-os/auth/google/status').then(data => {
+    if (data && !data.connected) {
+      document.getElementById('google-connect-link').style.display = '';
+    }
+  }).catch(() => {});
 </script>
 </body>
 </html>
