@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Weekly Review — Theo OS</title>
+  <link rel="icon" href="/favicon.png">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/admin/css/admin.css">
+  <script>document.documentElement.setAttribute('data-theme', localStorage.getItem('theo_os_theme') || 'dark')</script>
+  <style>
+    .review-layout {
+      max-width: 680px;
+    }
+
+    /* Progress bar */
+    .progress-bar-wrap {
+      height: 3px;
+      background: var(--border-ghost);
+      border-radius: 2px;
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: var(--teal);
+      border-radius: 2px;
+      transition: width 0.4s ease;
+    }
+
+    .step-indicator {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-tertiary);
+      margin-bottom: 24px;
+    }
+
+    /* Question card */
+    .question-card {
+      background: var(--bg-card, var(--void-elevated));
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 32px 36px;
+      margin-bottom: 16px;
+    }
+
+    .question-text {
+      font-family: var(--font-body);
+      font-size: 18px;
+      line-height: 1.6;
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+
+    /* Context box */
+    .context-box {
+      background: var(--void-surface);
+      border: 1px solid var(--border-ghost);
+      border-radius: 8px;
+      padding: 14px 18px;
+      margin-bottom: 20px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      line-height: 1.7;
+      color: var(--text-tertiary);
+    }
+
+    /* Answer textarea */
+    .answer-textarea {
+      width: 100%;
+      background: var(--void-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 14px 16px;
+      font-size: 14px;
+      font-family: var(--font-mono);
+      color: var(--text-primary);
+      outline: none;
+      resize: none;
+      min-height: 140px;
+      line-height: 1.7;
+      transition: border-color 0.2s;
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+    .answer-textarea:focus { border-color: var(--teal); }
+    .answer-textarea::placeholder { color: var(--text-tertiary); }
+
+    /* Action row */
+    .action-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    /* Continue button */
+    .btn-continue {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 11px 24px;
+      background: var(--teal);
+      color: #000;
+      font-family: var(--font-display);
+      font-size: 13px;
+      font-weight: 600;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: opacity 0.2s;
+      letter-spacing: 0.03em;
+    }
+    .btn-continue:hover { opacity: 0.85; }
+    .btn-continue:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* Begin button */
+    .begin-wrap {
+      padding: 48px 0;
+    }
+
+    .btn-begin {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 28px;
+      background: var(--teal);
+      color: #000;
+      font-family: var(--font-display);
+      font-size: 15px;
+      font-weight: 600;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: opacity 0.2s;
+      letter-spacing: 0.02em;
+    }
+    .btn-begin:hover { opacity: 0.85; }
+    .btn-begin:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* Loading dots (inline in button) */
+    .loading-dots {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+    }
+
+    .loading-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: currentColor;
+      animation: pulse-dot 1.4s infinite ease-in-out;
+    }
+    .loading-dot:nth-child(2) { animation-delay: 0.2s; }
+    .loading-dot:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes pulse-dot {
+      0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
+      40% { opacity: 1; transform: scale(1); }
+    }
+
+    /* Error state */
+    .error-state {
+      background: rgba(255, 138, 101, 0.08);
+      border: 1px solid rgba(255, 138, 101, 0.25);
+      border-radius: 8px;
+      padding: 16px 20px;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      color: var(--coral);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .btn-retry {
+      padding: 7px 14px;
+      background: none;
+      border: 1px solid var(--coral);
+      color: var(--coral);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: opacity 0.2s;
+      flex-shrink: 0;
+    }
+    .btn-retry:hover { opacity: 0.75; }
+
+    /* Done state */
+    .done-card {
+      background: var(--bg-card, var(--void-elevated));
+      border: 1px solid var(--teal);
+      border-radius: 12px;
+      padding: 36px;
+      margin-bottom: 20px;
+    }
+
+    .done-title {
+      font-family: var(--font-display);
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--teal);
+      margin-bottom: 8px;
+    }
+
+    .done-sub {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text-tertiary);
+      margin-bottom: 24px;
+      letter-spacing: 0.05em;
+    }
+
+    .done-summary {
+      font-family: var(--font-body);
+      font-size: 15px;
+      line-height: 1.7;
+      color: var(--text-primary);
+      padding: 20px;
+      background: var(--void-surface);
+      border-radius: 8px;
+      border-left: 3px solid var(--teal);
+    }
+
+    .btn-new-review {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 11px 22px;
+      background: none;
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      font-family: var(--font-mono);
+      font-size: 13px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-top: 20px;
+    }
+    .btn-new-review:hover { border-color: var(--teal); color: var(--teal); }
+
+    /* Intro text */
+    .intro-text {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      line-height: 1.75;
+      color: var(--text-tertiary);
+      margin-bottom: 8px;
+    }
+  </style>
+</head>
+<body>
+<div class="shell">
+  <nav class="sidebar">
+    <div class="sidebar-logo">THEO OS</div>
+
+    <div class="sidebar-label">Overview</div>
+    <a href="/admin/dashboard.html" class="sidebar-link">Dashboard</a>
+    <a href="/admin/capture.html" class="sidebar-link">Quick Capture</a>
+
+    <div class="sidebar-label">Life</div>
+    <a href="/admin/tasks.html" class="sidebar-link">Tasks</a>
+    <a href="/admin/goals.html" class="sidebar-link">Goals</a>
+    <a href="/admin/people.html" class="sidebar-link">People</a>
+    <a href="/admin/collections.html" class="sidebar-link">Collections</a>
+
+    <div class="sidebar-label">Mind</div>
+    <a href="/admin/journal.html" class="sidebar-link">Journal</a>
+    <a href="/admin/vision.html" class="sidebar-link">Life Vision</a>
+    <a href="/admin/review.html" class="sidebar-link active">Weekly Review</a>
+
+    <div class="sidebar-label">Inbox</div>
+    <a href="/admin/email.html" class="sidebar-link">Email Triage</a>
+
+    <div class="sidebar-label">Intelligence</div>
+    <a href="/admin/chat.html" class="sidebar-link">Chat</a>
+
+    <div class="sidebar-label" style="margin-top:24px">Account</div>
+    <button class="theme-toggle" id="theme-toggle"></button>
+    <a href="#" class="sidebar-link" id="logout-btn">Sign out</a>
+  </nav>
+
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <h1 class="page-title">Weekly Review</h1>
+        <p style="font-size:13px; color:var(--text-tertiary); margin-top:4px; font-family:var(--font-mono);">Sunday ritual. 10 minutes. Full picture.</p>
+      </div>
+    </div>
+
+    <div class="review-layout" id="review-root">
+
+      <!-- Idle state (default) -->
+      <div id="idle-state">
+        <p class="intro-text">A structured review in 5 steps. Each question builds on the last. The system pulls in what it tracked this week.</p>
+        <div class="begin-wrap">
+          <button class="btn-begin" id="begin-btn">
+            Begin Review &rarr;
+          </button>
+        </div>
+      </div>
+
+      <!-- Review mode (hidden until started) -->
+      <div id="review-state" style="display:none;">
+        <div class="progress-bar-wrap">
+          <div class="progress-bar-fill" id="progress-fill" style="width:20%"></div>
+        </div>
+        <div class="step-indicator" id="step-indicator">Step 1 of 5</div>
+
+        <div class="question-card" id="question-card">
+          <div class="question-text" id="question-text"></div>
+        </div>
+
+        <div class="context-box" id="context-box" style="display:none;"></div>
+
+        <div class="error-state" id="error-state" style="display:none;">
+          <span>Failed to load next step. Try again.</span>
+          <button class="btn-retry" id="retry-btn">Retry</button>
+        </div>
+
+        <textarea
+          class="answer-textarea"
+          id="answer-textarea"
+          placeholder="Type your answer..."
+        ></textarea>
+
+        <div class="action-row">
+          <button class="btn-continue" id="continue-btn">
+            Continue &rarr;
+          </button>
+        </div>
+      </div>
+
+      <!-- Done state (hidden until complete) -->
+      <div id="done-state" style="display:none;">
+        <div class="done-card">
+          <div class="done-title">Review complete.</div>
+          <div class="done-sub">Saved to journal.</div>
+          <div class="done-summary" id="done-summary"></div>
+        </div>
+        <button class="btn-new-review" id="new-review-btn">Start New Review</button>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<script src="/admin/js/auth.js"></script>
+<script>
+  requireAuth();
+
+  document.getElementById('logout-btn').addEventListener('click', e => {
+    e.preventDefault();
+    clearToken();
+    window.location.href = '/admin/index.html';
+  });
+
+  // ---- State ----
+  let reviewInProgress = false;
+  let currentStep = 0;
+  let history = [];
+  let lastQuestion = '';
+  let lastContext = '';
+  let retryFn = null;
+
+  // ---- Helpers ----
+
+  function esc(s) {
+    return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function autoExpand(el) {
+    el.style.height = 'auto';
+    el.style.height = el.scrollHeight + 'px';
+  }
+
+  function setLoading(loading) {
+    const btn = document.getElementById('continue-btn');
+    const ta = document.getElementById('answer-textarea');
+    if (loading) {
+      btn.innerHTML = `<span class="loading-dots"><span class="loading-dot"></span><span class="loading-dot"></span><span class="loading-dot"></span></span>`;
+      btn.disabled = true;
+      ta.disabled = true;
+    } else {
+      btn.innerHTML = 'Continue &rarr;';
+      btn.disabled = false;
+      ta.disabled = false;
+    }
+  }
+
+  function setBeginLoading(loading) {
+    const btn = document.getElementById('begin-btn');
+    if (loading) {
+      btn.innerHTML = `<span class="loading-dots"><span class="loading-dot"></span><span class="loading-dot"></span><span class="loading-dot"></span></span>`;
+      btn.disabled = true;
+    } else {
+      btn.innerHTML = 'Begin Review &rarr;';
+      btn.disabled = false;
+    }
+  }
+
+  function showError(show) {
+    document.getElementById('error-state').style.display = show ? 'flex' : 'none';
+  }
+
+  function renderStep(step, question, context) {
+    currentStep = step;
+    lastQuestion = question;
+    lastContext = context || '';
+
+    const progress = (step / 5) * 100;
+    document.getElementById('progress-fill').style.width = progress + '%';
+    document.getElementById('step-indicator').textContent = `Step ${step} of 5`;
+    document.getElementById('question-text').textContent = question;
+
+    const ctxBox = document.getElementById('context-box');
+    if (context && context.trim()) {
+      ctxBox.textContent = context;
+      ctxBox.style.display = 'block';
+    } else {
+      ctxBox.style.display = 'none';
+    }
+
+    const ta = document.getElementById('answer-textarea');
+    ta.value = '';
+    ta.style.height = '';
+    ta.focus();
+
+    showError(false);
+  }
+
+  function enterReviewMode(step, question, context) {
+    reviewInProgress = true;
+    document.getElementById('idle-state').style.display = 'none';
+    document.getElementById('review-state').style.display = 'block';
+    renderStep(step, question, context);
+  }
+
+  function showDone(summary) {
+    reviewInProgress = false;
+    document.getElementById('review-state').style.display = 'none';
+    document.getElementById('done-state').style.display = 'block';
+    document.getElementById('done-summary').textContent = summary;
+  }
+
+  // ---- Before unload warning ----
+
+  window.addEventListener('beforeunload', e => {
+    if (reviewInProgress) {
+      e.preventDefault();
+      e.returnValue = 'Review in progress. Your answers will be lost.';
+      return 'Review in progress. Your answers will be lost.';
+    }
+  });
+
+  // ---- Begin review ----
+
+  async function beginReview() {
+    setBeginLoading(true);
+    try {
+      const data = await apiPost('/api/theo-os/review/start', {});
+      if (!data) {
+        setBeginLoading(false);
+        alert('Failed to start review. Please try again.');
+        return;
+      }
+      history = [];
+      setBeginLoading(false);
+      enterReviewMode(data.step, data.question, data.context);
+    } catch (e) {
+      setBeginLoading(false);
+      alert('Failed to start review. Please try again.');
+    }
+  }
+
+  document.getElementById('begin-btn').addEventListener('click', beginReview);
+
+  // ---- Continue (submit answer, load next step) ----
+
+  async function submitAnswer() {
+    const answer = document.getElementById('answer-textarea').value.trim();
+    if (!answer) {
+      document.getElementById('answer-textarea').focus();
+      return;
+    }
+
+    showError(false);
+    setLoading(true);
+
+    // Record current step in history
+    const currentEntry = { step: currentStep, question: lastQuestion, answer };
+    const nextHistory = [...history, currentEntry];
+
+    async function doSubmit() {
+      try {
+        const data = await apiPost('/api/theo-os/review/next', {
+          step: currentStep,
+          answer,
+          history: nextHistory
+        });
+
+        if (!data) {
+          setLoading(false);
+          showError(true);
+          retryFn = doSubmit;
+          return;
+        }
+
+        history = nextHistory;
+
+        if (data.done) {
+          showDone(data.summary || 'Review complete.');
+          return;
+        }
+
+        setLoading(false);
+        renderStep(data.step, data.question, data.context);
+      } catch (e) {
+        setLoading(false);
+        showError(true);
+        retryFn = doSubmit;
+      }
+    }
+
+    await doSubmit();
+  }
+
+  document.getElementById('continue-btn').addEventListener('click', submitAnswer);
+
+  document.getElementById('answer-textarea').addEventListener('keydown', e => {
+    // Cmd+Enter or Ctrl+Enter to submit
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      submitAnswer();
+    }
+  });
+
+  document.getElementById('answer-textarea').addEventListener('input', function() {
+    autoExpand(this);
+  });
+
+  // ---- Retry ----
+
+  document.getElementById('retry-btn').addEventListener('click', () => {
+    if (retryFn) {
+      showError(false);
+      setLoading(true);
+      retryFn();
+    }
+  });
+
+  // ---- New review ----
+
+  document.getElementById('new-review-btn').addEventListener('click', () => {
+    history = [];
+    currentStep = 0;
+    lastQuestion = '';
+    lastContext = '';
+    retryFn = null;
+    reviewInProgress = false;
+    document.getElementById('done-state').style.display = 'none';
+    document.getElementById('idle-state').style.display = 'block';
+    setBeginLoading(false);
+  });
+
+  // Cmd+K capture overlay
+  (function() {
+    const overlay = document.getElementById('capture-overlay');
+    const captureInput = document.getElementById('capture-input');
+    const captureHint = document.getElementById('capture-hint');
+    function openCapture() {
+      overlay.classList.add('open');
+      captureInput.value = '';
+      captureHint.textContent = '↵ to capture · Esc to close';
+      captureInput.focus();
+    }
+    function closeCapture() { overlay.classList.remove('open'); captureInput.value = ''; }
+    document.addEventListener('keydown', e => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); overlay.classList.contains('open') ? closeCapture() : openCapture(); }
+      if (e.key === 'Escape' && overlay.classList.contains('open')) closeCapture();
+    });
+    overlay.addEventListener('click', e => { if (e.target === overlay) closeCapture(); });
+    captureInput.addEventListener('keydown', async e => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        const text = captureInput.value.trim();
+        if (!text) return;
+        captureHint.textContent = 'Saving...';
+        try {
+          const data = await apiPost('/api/theo-os/capture', { text });
+          captureHint.textContent = (data && data.message) ? data.message : 'Captured.';
+          captureInput.value = '';
+          setTimeout(() => closeCapture(), 1500);
+        } catch { captureHint.textContent = 'Failed to save — check connection.'; }
+      }
+    });
+  })();
+
+</script>
+
+<!-- Cmd+K capture overlay -->
+<div class="capture-overlay" id="capture-overlay">
+  <div class="capture-box">
+    <textarea class="capture-input" id="capture-input"
+      placeholder="Capture anything — task, goal, idea, person, reminder, restaurant..." rows="2"></textarea>
+    <div class="capture-hint" id="capture-hint">↵ to capture · Esc to close</div>
+  </div>
+</div>
+</body>
+</html>

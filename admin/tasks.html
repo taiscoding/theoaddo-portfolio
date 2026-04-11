@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tasks — Theo OS</title>
+  <link rel="icon" href="/favicon.png">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/admin/css/admin.css">
+  <script>document.documentElement.setAttribute('data-theme', localStorage.getItem('theo_os_theme') || 'dark')</script>
+  <style>
+    /* Filter pills */
+    .filter-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 24px; }
+    .filter-pill {
+      font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.06em;
+      text-transform: uppercase; padding: 5px 12px; border-radius: 20px;
+      border: 1px solid var(--border-subtle); background: none;
+      color: var(--text-tertiary); cursor: pointer; transition: all 0.2s;
+    }
+    .filter-pill:hover { color: var(--text-secondary); border-color: var(--border-subtle); }
+    .filter-pill.active { background: var(--teal-subtle); color: var(--teal); border-color: var(--teal); }
+
+    /* Kanban board */
+    .board { display: flex; gap: 14px; overflow-x: auto; padding-bottom: 24px; align-items: flex-start; min-height: calc(100vh - 280px); }
+    .board-col {
+      flex-shrink: 0; width: 210px;
+      background: var(--void-elevated); border: 1px solid var(--border-ghost);
+      border-radius: 10px; padding: 14px; display: flex; flex-direction: column;
+      min-height: 200px;
+    }
+    .board-col.drag-over { border-color: var(--teal); background: rgba(78,205,196,0.05); }
+
+    .col-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    .col-name {
+      font-family: var(--font-mono); font-size: 11px; font-weight: 500;
+      letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary);
+    }
+    .col-count {
+      background: var(--void-surface); border-radius: 10px;
+      padding: 2px 8px; font-size: 11px; font-family: var(--font-mono);
+      color: var(--text-tertiary);
+    }
+
+    .col-cards { flex: 1; min-height: 40px; }
+
+    /* Task card */
+    .task-card {
+      background: var(--void-space); border: 1px solid var(--border-ghost);
+      border-radius: 7px; padding: 11px 12px; margin-bottom: 8px;
+      cursor: pointer; transition: border-color 0.2s, transform 0.1s;
+      user-select: none;
+    }
+    .task-card:hover { border-color: var(--border-subtle); }
+    .task-card:last-child { margin-bottom: 0; }
+    .task-card.dragging { opacity: 0.5; transform: scale(0.97); }
+
+    .task-title { font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 7px; line-height: 1.4; }
+
+    .task-meta { display: flex; flex-direction: column; gap: 5px; }
+
+    .area-badge {
+      display: inline-block; font-family: var(--font-mono); font-size: 10px;
+      padding: 2px 7px; border-radius: 3px; font-weight: 500;
+      text-transform: uppercase; letter-spacing: 0.04em; align-self: flex-start;
+    }
+    .area-teal { background: var(--teal-subtle); color: var(--teal); }
+    .area-coral { background: rgba(255,138,101,0.12); color: var(--coral); }
+    .area-purple { background: rgba(187,143,206,0.12); color: var(--purple); }
+    .area-slate { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.45); }
+
+    .due-date {
+      font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.03em;
+    }
+    .due-overdue { color: var(--coral); }
+    .due-today { color: #f5c842; }
+    .due-future { color: var(--text-tertiary); }
+
+    .col-empty { font-size: 12px; color: var(--text-tertiary); padding: 8px 2px; }
+
+    /* Modal form fields */
+    .form-field { margin-bottom: 18px; }
+    .form-label {
+      display: block; font-family: var(--font-mono); font-size: 11px;
+      letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary);
+      margin-bottom: 7px;
+    }
+    .form-input {
+      width: 100%; background: var(--void-surface); border: 1px solid var(--border-subtle);
+      border-radius: 6px; padding: 10px 14px; font-size: 14px; color: var(--text-primary);
+      font-family: var(--font-body); outline: none; transition: border-color 0.2s;
+    }
+    .form-input:focus { border-color: var(--teal); }
+
+    .btn-danger {
+      background: rgba(255,138,101,0.12); color: var(--coral);
+      border: 1px solid rgba(255,138,101,0.3);
+    }
+    .btn-danger:hover { background: rgba(255,138,101,0.22); opacity: 1; }
+
+    .modal-footer-left { margin-right: auto; }
+  </style>
+</head>
+<body>
+<div class="shell">
+  <nav class="sidebar">
+    <div class="sidebar-logo">THEO OS</div>
+
+    <div class="sidebar-label">Overview</div>
+    <a href="/admin/dashboard.html" class="sidebar-link">Dashboard</a>
+    <a href="/admin/capture.html" class="sidebar-link">Quick Capture</a>
+
+    <div class="sidebar-label">Life</div>
+    <a href="/admin/tasks.html" class="sidebar-link active">Tasks</a>
+    <a href="/admin/goals.html" class="sidebar-link">Goals</a>
+    <a href="/admin/people.html" class="sidebar-link">People</a>
+    <a href="/admin/collections.html" class="sidebar-link">Collections</a>
+
+    <div class="sidebar-label">Mind</div>
+    <a href="/admin/journal.html" class="sidebar-link">Journal</a>
+    <a href="/admin/vision.html" class="sidebar-link">Life Vision</a>
+    <a href="/admin/review.html" class="sidebar-link">Weekly Review</a>
+
+    <div class="sidebar-label">Inbox</div>
+    <a href="/admin/email.html" class="sidebar-link">Email Triage</a>
+
+    <div class="sidebar-label">Intelligence</div>
+    <a href="/admin/chat.html" class="sidebar-link">Chat</a>
+
+    <div class="sidebar-label" style="margin-top:24px">Account</div>
+    <button class="theme-toggle" id="theme-toggle"></button>
+    <a href="#" class="sidebar-link" id="logout-btn">Sign out</a>
+  </nav>
+
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <h1 class="page-title">Tasks</h1>
+      </div>
+      <button class="add-btn" id="new-task-btn">+ New Task</button>
+    </div>
+
+    <!-- Area filter pills -->
+    <div class="filter-bar" id="filter-bar">
+      <button class="filter-pill active" data-area="all">All</button>
+      <button class="filter-pill" data-area="work">Work</button>
+      <button class="filter-pill" data-area="finances">Finances</button>
+      <button class="filter-pill" data-area="health">Health</button>
+      <button class="filter-pill" data-area="relationships">Relationships</button>
+      <button class="filter-pill" data-area="growth">Growth</button>
+      <button class="filter-pill" data-area="creative">Creative</button>
+      <button class="filter-pill" data-area="exploration">Exploration</button>
+      <button class="filter-pill" data-area="life">Life</button>
+    </div>
+
+    <!-- Kanban board -->
+    <div class="board" id="board">
+      <div class="board-col" data-status="inbox" id="col-inbox">
+        <div class="col-header">
+          <span class="col-name">Inbox</span>
+          <span class="col-count" id="count-inbox">0</span>
+        </div>
+        <div class="col-cards" id="cards-inbox"></div>
+      </div>
+      <div class="board-col" data-status="today" id="col-today">
+        <div class="col-header">
+          <span class="col-name">Today</span>
+          <span class="col-count" id="count-today">0</span>
+        </div>
+        <div class="col-cards" id="cards-today"></div>
+      </div>
+      <div class="board-col" data-status="this_week" id="col-this_week">
+        <div class="col-header">
+          <span class="col-name">This Week</span>
+          <span class="col-count" id="count-this_week">0</span>
+        </div>
+        <div class="col-cards" id="cards-this_week"></div>
+      </div>
+      <div class="board-col" data-status="later" id="col-later">
+        <div class="col-header">
+          <span class="col-name">Later</span>
+          <span class="col-count" id="count-later">0</span>
+        </div>
+        <div class="col-cards" id="cards-later"></div>
+      </div>
+      <div class="board-col" data-status="someday" id="col-someday">
+        <div class="col-header">
+          <span class="col-name">Someday</span>
+          <span class="col-count" id="count-someday">0</span>
+        </div>
+        <div class="col-cards" id="cards-someday"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- New / Edit Task Modal -->
+<div class="modal-overlay" id="task-modal" style="display:none" role="dialog" aria-modal="true" aria-labelledby="modal-title-text">
+  <div class="modal">
+    <div class="modal-title" id="modal-title-text">New Task</div>
+
+    <div class="form-field">
+      <label class="form-label" for="field-title">Title *</label>
+      <input class="form-input" type="text" id="field-title" placeholder="What needs doing?" autocomplete="off">
+    </div>
+
+    <div class="form-field">
+      <label class="form-label" for="field-area">Area</label>
+      <select class="form-input" id="field-area">
+        <option value="">None</option>
+        <option value="work">Work</option>
+        <option value="finances">Finances</option>
+        <option value="health">Health</option>
+        <option value="relationships">Relationships</option>
+        <option value="growth">Growth</option>
+        <option value="creative">Creative</option>
+        <option value="exploration">Exploration</option>
+        <option value="life">Life</option>
+      </select>
+    </div>
+
+    <div class="form-field">
+      <label class="form-label" for="field-status">Status</label>
+      <select class="form-input" id="field-status">
+        <option value="inbox">Inbox</option>
+        <option value="today">Today</option>
+        <option value="this_week">This Week</option>
+        <option value="later">Later</option>
+        <option value="someday">Someday</option>
+      </select>
+    </div>
+
+    <div class="form-field">
+      <label class="form-label" for="field-due">Due Date</label>
+      <input class="form-input" type="date" id="field-due">
+    </div>
+
+    <div class="form-field">
+      <label class="form-label" for="field-notes">Notes</label>
+      <textarea class="form-input" id="field-notes" rows="3" placeholder="Any details..."></textarea>
+    </div>
+
+    <div class="modal-footer">
+      <div class="modal-footer-left">
+        <button class="btn-sm btn-danger" id="delete-task-btn" style="display:none">Delete</button>
+      </div>
+      <button class="btn-sm btn-ghost" id="modal-cancel-btn">Cancel</button>
+      <button class="btn-sm btn-primary" id="modal-save-btn">Save</button>
+    </div>
+  </div>
+</div>
+
+<script src="/admin/js/auth.js"></script>
+<script>
+  requireAuth();
+
+  document.getElementById('logout-btn').addEventListener('click', e => {
+    e.preventDefault();
+    clearToken();
+    window.location.href = '/admin/index.html';
+  });
+
+  // ---- State ----
+  let allTasks = [];
+  let activeArea = 'all';
+  let editingId = null;
+
+  const STATUSES = ['inbox', 'today', 'this_week', 'later', 'someday'];
+
+  const AREA_CLASS = {
+    work: 'area-teal', growth: 'area-teal',
+    health: 'area-coral', life: 'area-coral', finances: 'area-coral',
+    relationships: 'area-purple', creative: 'area-purple',
+    exploration: 'area-slate'
+  };
+
+  function esc(s) {
+    return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function todayStr() {
+    return new Date().toISOString().split('T')[0];
+  }
+
+  function dueDateClass(due) {
+    if (!due) return '';
+    const today = todayStr();
+    if (due < today) return 'due-overdue';
+    if (due === today) return 'due-today';
+    return 'due-future';
+  }
+
+  function fmtDue(due) {
+    if (!due) return '';
+    const [y, m, d] = due.split('-').map(Number);
+    return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+
+  // ---- Render board ----
+
+  function visibleTasks() {
+    if (activeArea === 'all') return allTasks;
+    return allTasks.filter(t => t.area === activeArea);
+  }
+
+  function renderBoard() {
+    const tasks = visibleTasks();
+
+    STATUSES.forEach(status => {
+      const colTasks = tasks.filter(t => t.status === status);
+      const countEl = document.getElementById('count-' + status);
+      const cardsEl = document.getElementById('cards-' + status);
+
+      countEl.textContent = colTasks.length;
+
+      if (colTasks.length === 0) {
+        const msgs = {
+          inbox: 'Your inbox is clear. Cmd+K to capture something.',
+          today: 'Nothing for today. Drag a task here or Cmd+K to add one.',
+          this_week: 'No tasks this week.',
+          later: 'Nothing queued for later.',
+          someday: 'No someday tasks.'
+        };
+        cardsEl.innerHTML = `<div class="col-empty">${msgs[status] || 'No tasks here.'}</div>`;
+        return;
+      }
+
+      cardsEl.innerHTML = colTasks.map(task => {
+        const areaClass = (task.area && AREA_CLASS[task.area]) || 'area-slate';
+        const areaBadge = task.area
+          ? `<span class="area-badge ${areaClass}">${esc(task.area)}</span>`
+          : '';
+        const dc = task.due_date ? dueDateClass(task.due_date) : '';
+        const dueBadge = task.due_date
+          ? `<span class="due-date ${dc}">${fmtDue(task.due_date)}</span>`
+          : '';
+        const hasMeta = task.area || task.due_date;
+        return `<div class="task-card"
+          data-id="${task.id}"
+          draggable="true"
+          role="button"
+          tabindex="0"
+          aria-label="${esc(task.title)}"
+        >
+          <div class="task-title">${esc(task.title)}</div>
+          ${hasMeta ? `<div class="task-meta">${areaBadge}${dueBadge}</div>` : ''}
+        </div>`;
+      }).join('');
+
+      // Attach card event listeners
+      cardsEl.querySelectorAll('.task-card').forEach(card => {
+        card.addEventListener('click', () => openEditModal(Number(card.dataset.id)));
+        card.addEventListener('keydown', e => {
+          if (e.key === 'Enter' || e.key === ' ') openEditModal(Number(card.dataset.id));
+        });
+        card.addEventListener('dragstart', onDragStart);
+        card.addEventListener('dragend', onDragEnd);
+      });
+    });
+  }
+
+  // ---- Area filter ----
+
+  document.getElementById('filter-bar').addEventListener('click', e => {
+    const pill = e.target.closest('.filter-pill');
+    if (!pill) return;
+    document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+    pill.classList.add('active');
+    activeArea = pill.dataset.area;
+    renderBoard();
+  });
+
+  // ---- Drag and drop ----
+
+  let dragTaskId = null;
+
+  function onDragStart(e) {
+    dragTaskId = Number(e.currentTarget.dataset.id);
+    e.currentTarget.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+  }
+
+  function onDragEnd(e) {
+    e.currentTarget.classList.remove('dragging');
+    document.querySelectorAll('.board-col').forEach(col => col.classList.remove('drag-over'));
+  }
+
+  document.querySelectorAll('.board-col').forEach(col => {
+    col.addEventListener('dragover', e => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      col.classList.add('drag-over');
+    });
+    col.addEventListener('dragleave', e => {
+      if (!col.contains(e.relatedTarget)) col.classList.remove('drag-over');
+    });
+    col.addEventListener('drop', async e => {
+      e.preventDefault();
+      col.classList.remove('drag-over');
+      const newStatus = col.dataset.status;
+      if (!dragTaskId || !newStatus) return;
+      const task = allTasks.find(t => t.id === dragTaskId);
+      if (!task || task.status === newStatus) return;
+      await patchTask(dragTaskId, { status: newStatus });
+    });
+  });
+
+  // ---- API calls ----
+
+  async function loadTasks() {
+    const data = await apiGet('/api/theo-os/tasks');
+    allTasks = data || [];
+    renderBoard();
+  }
+
+  async function patchTask(id, fields) {
+    const updated = await apiPatch('/api/theo-os/tasks/' + id, fields);
+    if (!updated) return;
+    const idx = allTasks.findIndex(t => t.id === id);
+    if (idx !== -1) allTasks[idx] = updated;
+    renderBoard();
+  }
+
+  async function createTask(fields) {
+    return apiPost('/api/theo-os/tasks', fields);
+  }
+
+  async function deleteTask(id) {
+    const ok = await apiDelete('/api/theo-os/tasks/' + id);
+    if (!ok) return;
+    allTasks = allTasks.filter(t => t.id !== id);
+    renderBoard();
+  }
+
+  // ---- Modal ----
+
+  const modal = document.getElementById('task-modal');
+  const modalTitle = document.getElementById('modal-title-text');
+  const fieldTitle = document.getElementById('field-title');
+  const fieldArea = document.getElementById('field-area');
+  const fieldStatus = document.getElementById('field-status');
+  const fieldDue = document.getElementById('field-due');
+  const fieldNotes = document.getElementById('field-notes');
+  const deleteBtn = document.getElementById('delete-task-btn');
+  const saveBtn = document.getElementById('modal-save-btn');
+  const cancelBtn = document.getElementById('modal-cancel-btn');
+
+  function openNewModal(prefillStatus) {
+    editingId = null;
+    modalTitle.textContent = 'New Task';
+    fieldTitle.value = '';
+    fieldArea.value = '';
+    fieldStatus.value = prefillStatus || 'inbox';
+    fieldDue.value = '';
+    fieldNotes.value = '';
+    deleteBtn.style.display = 'none';
+    modal.style.display = 'flex';
+    fieldTitle.focus();
+  }
+
+  function openEditModal(id) {
+    const task = allTasks.find(t => t.id === id);
+    if (!task) return;
+    editingId = id;
+    modalTitle.textContent = 'Edit Task';
+    fieldTitle.value = task.title || '';
+    fieldArea.value = task.area || '';
+    fieldStatus.value = task.status || 'inbox';
+    fieldDue.value = task.due_date || '';
+    fieldNotes.value = task.notes || '';
+    deleteBtn.style.display = 'inline-block';
+    modal.style.display = 'flex';
+    fieldTitle.focus();
+  }
+
+  function closeModal() {
+    modal.style.display = 'none';
+    editingId = null;
+  }
+
+  document.getElementById('new-task-btn').addEventListener('click', () => openNewModal());
+
+  cancelBtn.addEventListener('click', closeModal);
+
+  modal.addEventListener('click', e => {
+    if (e.target === modal) closeModal();
+  });
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && modal.style.display === 'flex') closeModal();
+  });
+
+  saveBtn.addEventListener('click', async () => {
+    const title = fieldTitle.value.trim();
+    if (!title) { fieldTitle.focus(); return; }
+
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving...';
+
+    try {
+      const fields = {
+        title,
+        area: fieldArea.value || null,
+        status: fieldStatus.value || 'inbox',
+        due_date: fieldDue.value || null,
+        notes: fieldNotes.value.trim() || null,
+      };
+
+      if (editingId) {
+        await patchTask(editingId, fields);
+      } else {
+        const created = await createTask(fields);
+        if (created) {
+          allTasks.unshift(created);
+          renderBoard();
+        }
+      }
+
+      closeModal();
+    } finally {
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Save';
+    }
+  });
+
+  deleteBtn.addEventListener('click', async () => {
+    if (!editingId) return;
+    const task = allTasks.find(t => t.id === editingId);
+    const name = task ? task.title : 'this task';
+    if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
+    const id = editingId;
+    closeModal();
+    await deleteTask(id);
+  });
+
+  // ---- Init ----
+  loadTasks();
+
+  // Cmd+K capture overlay
+  (function() {
+    const overlay = document.getElementById('capture-overlay');
+    const captureInput = document.getElementById('capture-input');
+    const captureHint = document.getElementById('capture-hint');
+    function openCapture() {
+      overlay.classList.add('open');
+      captureInput.value = '';
+      captureHint.textContent = '↵ to capture · Esc to close';
+      captureInput.focus();
+    }
+    function closeCapture() { overlay.classList.remove('open'); captureInput.value = ''; }
+    document.addEventListener('keydown', e => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); overlay.classList.contains('open') ? closeCapture() : openCapture(); }
+      if (e.key === 'Escape' && overlay.classList.contains('open')) closeCapture();
+    });
+    overlay.addEventListener('click', e => { if (e.target === overlay) closeCapture(); });
+    captureInput.addEventListener('keydown', async e => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        const text = captureInput.value.trim();
+        if (!text) return;
+        captureHint.textContent = 'Saving...';
+        try {
+          const data = await apiPost('/api/theo-os/capture', { text });
+          captureHint.textContent = (data && data.message) ? data.message : 'Captured.';
+          captureInput.value = '';
+          setTimeout(() => closeCapture(), 1500);
+        } catch { captureHint.textContent = 'Failed to save — check connection.'; }
+      }
+    });
+  })();
+
+</script>
+
+<!-- Cmd+K capture overlay -->
+<div class="capture-overlay" id="capture-overlay">
+  <div class="capture-box">
+    <textarea class="capture-input" id="capture-input"
+      placeholder="Capture anything — task, goal, idea, person, reminder, restaurant..." rows="2"></textarea>
+    <div class="capture-hint" id="capture-hint">↵ to capture · Esc to close</div>
+  </div>
+</div>
+</body>
+</html>

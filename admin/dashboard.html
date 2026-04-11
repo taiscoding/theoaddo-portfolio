@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard — Theo OS</title>
+  <link rel="icon" href="/favicon.png">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/admin/css/admin.css">
+  <script>document.documentElement.setAttribute('data-theme', localStorage.getItem('theo_os_theme') || 'dark')</script>
+  <style>
+    /* Stats grid */
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; margin-bottom: 40px; }
+    .stat-card { background: var(--void-elevated); border: 1px solid var(--border-ghost); border-radius: 10px; padding: 20px 24px; }
+    .stat-label { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+    .stat-value { font-family: var(--font-display); font-size: 32px; font-weight: 700; color: var(--text-primary); line-height: 1; }
+    .stat-sub { font-size: 12px; color: var(--text-tertiary); margin-top: 6px; }
+    .stat-value.teal { color: var(--teal); }
+
+    /* Activity dot */
+    .activity-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .activity-dot.active { background: var(--teal); box-shadow: 0 0 6px var(--teal); }
+    .activity-dot.semi { background: #f5c842; }
+    .activity-dot.inactive { background: var(--coral); }
+
+    /* Agents grid */
+    .agents-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; margin-bottom: 40px; }
+    .agent-card { background: var(--void-elevated); border: 1px solid var(--border-ghost); border-radius: 10px; padding: 20px 24px; }
+    .agent-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    .agent-name { font-family: var(--font-display); font-size: 14px; font-weight: 600; color: var(--text-primary); }
+    .agent-type { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em; color: var(--text-tertiary); text-transform: uppercase; margin-bottom: 4px; }
+    .agent-status { font-size: 12px; color: var(--text-secondary); line-height: 1.6; }
+
+    /* Common dot */
+    .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; }
+    .dot-teal { background: var(--teal); box-shadow: 0 0 6px var(--teal); }
+
+    /* Section label */
+    .section-label { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 16px; }
+
+    /* Stage bars */
+    .stage-bars { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
+    .stage-row { display: flex; align-items: center; gap: 10px; font-size: 12px; }
+    .stage-name { color: var(--text-tertiary); width: 110px; font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .stage-bar-wrap { flex: 1; height: 4px; background: var(--void-surface); border-radius: 2px; overflow: hidden; }
+    .stage-bar { height: 100%; border-radius: 2px; background: var(--teal); transition: width 0.4s; }
+    .stage-count { color: var(--text-secondary); font-family: var(--font-mono); font-size: 11px; width: 20px; text-align: right; }
+
+    /* Pipeline mini */
+    .pipeline-preview { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 40px; }
+    .pipeline-mini { background: var(--void-elevated); border: 1px solid var(--border-ghost); border-radius: 10px; padding: 20px 24px; }
+    .mini-title { font-family: var(--font-display); font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+    .mini-link { font-family: var(--font-mono); font-size: 10px; color: var(--teal); text-decoration: none; letter-spacing: 0.05em; }
+    .mini-link:hover { opacity: 0.8; }
+
+    /* Attention */
+    .attention-section { margin-bottom: 40px; }
+    .attention-row { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: var(--void-elevated); border: 1px solid var(--border-ghost); border-radius: 8px; margin-bottom: 8px; text-decoration: none; transition: border-color 0.15s; }
+    .attention-row:hover { border-color: var(--border-subtle); }
+    .attention-row.urgent { border-color: rgba(255,138,101,0.4); }
+    .attention-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .attention-dot.urgent { background: var(--coral); box-shadow: 0 0 6px var(--coral); }
+    .attention-dot.soon { background: #f5c842; }
+    .attention-dot.ok { background: var(--teal); }
+    .attention-label { flex: 1; font-size: 13px; color: var(--text-primary); }
+    .attention-label span { color: var(--text-tertiary); font-size: 12px; margin-left: 6px; }
+    .attention-days { font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); flex-shrink: 0; }
+    .attention-days.urgent { color: var(--coral); }
+    .attention-empty { font-size: 13px; color: var(--text-tertiary); padding: 12px 0; }
+
+    /* Morning briefing */
+    .briefing-card { background: var(--void-elevated); border: 1px solid var(--border-ghost); border-radius: 10px; padding: 24px; margin-bottom: 40px; }
+    .briefing-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+    .briefing-title { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-tertiary); }
+    .briefing-time { font-family: var(--font-mono); font-size: 10px; color: var(--text-tertiary); }
+    .briefing-body { font-size: 13px; color: var(--text-secondary); line-height: 1.7; white-space: pre-wrap; }
+    .briefing-generate { background: none; border: 1px solid var(--border-subtle); border-radius: 6px; padding: 8px 16px; font-size: 12px; font-family: var(--font-mono); color: var(--teal); cursor: pointer; transition: all 0.2s; letter-spacing: 0.05em; }
+    .briefing-generate:hover { background: var(--teal-subtle); border-color: var(--teal); }
+    .briefing-loading { font-size: 13px; color: var(--text-tertiary); font-style: italic; }
+
+    /* MindMapper insight */
+    .insight-card { background: var(--void-elevated); border: 1px solid var(--border-ghost); border-left: 3px solid var(--teal); border-radius: 10px; padding: 20px 24px; margin-bottom: 40px; display: flex; align-items: flex-start; gap: 16px; }
+    .insight-body { flex: 1; }
+    .insight-agent { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--teal); margin-bottom: 8px; }
+    .insight-text { font-size: 13px; color: var(--text-secondary); line-height: 1.65; }
+    .insight-dismiss { background: none; border: none; color: var(--text-tertiary); cursor: pointer; font-size: 16px; padding: 0 4px; line-height: 1; transition: color 0.2s; flex-shrink: 0; }
+    .insight-dismiss:hover { color: var(--text-primary); }
+  </style>
+</head>
+<body>
+<div class="shell">
+  <nav class="sidebar">
+    <div class="sidebar-logo">THEO OS</div>
+
+    <div class="sidebar-label">Overview</div>
+    <a href="/admin/dashboard.html" class="sidebar-link active">Dashboard</a>
+    <a href="/admin/capture.html" class="sidebar-link">Quick Capture</a>
+
+    <div class="sidebar-label">Life</div>
+    <a href="/admin/tasks.html" class="sidebar-link">Tasks</a>
+    <a href="/admin/goals.html" class="sidebar-link">Goals</a>
+    <a href="/admin/people.html" class="sidebar-link">People</a>
+    <a href="/admin/collections.html" class="sidebar-link">Collections</a>
+
+    <div class="sidebar-label">Mind</div>
+    <a href="/admin/journal.html" class="sidebar-link">Journal</a>
+    <a href="/admin/vision.html" class="sidebar-link">Life Vision</a>
+    <a href="/admin/review.html" class="sidebar-link">Weekly Review</a>
+
+    <div class="sidebar-label">Inbox</div>
+    <a href="/admin/email.html" class="sidebar-link">Email Triage</a>
+
+    <div class="sidebar-label">Intelligence</div>
+    <a href="/admin/chat.html" class="sidebar-link">Chat</a>
+
+    <div class="sidebar-label" style="margin-top:24px">Account</div>
+    <button class="theme-toggle" id="theme-toggle"></button>
+    <a href="#" class="sidebar-link" id="logout-btn">Sign out</a>
+  </nav>
+
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <h1 class="page-title" id="greeting">Good morning.</h1>
+        <p class="page-sub" id="date-sub"></p>
+      </div>
+    </div>
+
+    <!-- Morning Briefing -->
+    <div class="section-label">Morning Briefing</div>
+    <div class="briefing-card" id="briefing-card">
+      <div class="briefing-header">
+        <div class="briefing-title">Briefing Agent</div>
+        <span class="briefing-time" id="briefing-time"></span>
+      </div>
+      <div id="briefing-body"><span class="briefing-loading">Loading...</span></div>
+    </div>
+
+    <!-- Life Health -->
+    <div class="section-label">Life Health</div>
+    <div class="stats-grid" id="life-health-grid">
+      <!-- populated by JS -->
+    </div>
+
+    <!-- Attention -->
+    <div class="section-label">Attention</div>
+    <div class="attention-section" id="attention-section">
+      <!-- populated by JS -->
+    </div>
+
+    <!-- MindMapper Insight -->
+    <div id="insight-wrapper" style="display:none">
+      <div class="section-label">MindMapper</div>
+      <div class="insight-card" id="insight-card">
+        <div class="insight-body">
+          <div class="insight-agent">Weekly Insight Agent</div>
+          <div class="insight-text" id="insight-text"></div>
+        </div>
+        <button class="insight-dismiss" id="insight-dismiss" title="Dismiss">&#x2715;</button>
+      </div>
+    </div>
+
+    <!-- Agents -->
+    <div class="section-label">Agents</div>
+    <div class="agents-grid">
+      <div class="agent-card">
+        <div class="agent-header">
+          <div>
+            <div class="agent-type">Daily Briefing</div>
+            <div class="agent-name">Briefing Agent</div>
+          </div>
+          <span><span class="dot dot-teal"></span><span style="font-size:12px;color:var(--teal);font-family:var(--font-mono)">active</span></span>
+        </div>
+        <div class="agent-status">Runs daily at 6am. Surveys your tasks, calendar, and relationships. Generates your morning briefing.</div>
+      </div>
+      <div class="agent-card">
+        <div class="agent-header">
+          <div>
+            <div class="agent-type">Email</div>
+            <div class="agent-name">Email Triage Agent</div>
+          </div>
+          <span><span class="dot dot-teal"></span><span style="font-size:12px;color:var(--teal);font-family:var(--font-mono)">active</span></span>
+        </div>
+        <div class="agent-status">Runs on demand. Pulls unread Gmail threads and drafts replies for your review.</div>
+        <div style="margin-top:12px;display:flex;gap:12px;align-items:center">
+          <a href="/admin/email.html" class="mini-link">Open triage →</a>
+          <button id="google-connect-btn" class="mini-link" style="display:none;background:none;border:none;cursor:pointer;padding:0">Connect Gmail + Calendar →</button>
+        </div>
+      </div>
+      <div class="agent-card">
+        <div class="agent-header">
+          <div>
+            <div class="agent-type">Intelligence</div>
+            <div class="agent-name">Weekly Insight Agent</div>
+          </div>
+          <span><span class="dot dot-teal"></span><span style="font-size:12px;color:var(--teal);font-family:var(--font-mono)">active</span></span>
+        </div>
+        <div class="agent-status">Runs every Sunday. Analyzes 2 weeks of activity and surfaces behavioral pattern observations.</div>
+      </div>
+    </div>
+
+    <!-- Stats Breakdown -->
+    <div class="section-label">Breakdown</div>
+    <div class="pipeline-preview">
+      <div class="pipeline-mini">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:16px">
+          <div class="mini-title">Tasks</div>
+          <a href="/admin/tasks.html" class="mini-link">Open tasks →</a>
+        </div>
+        <div class="stage-bars" id="tasks-bars"></div>
+      </div>
+      <div class="pipeline-mini">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:16px">
+          <div class="mini-title">Goals</div>
+          <a href="/admin/goals.html" class="mini-link">Open goals →</a>
+        </div>
+        <div class="stage-bars" id="goals-bars"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Cmd+K capture overlay -->
+<div class="capture-overlay" id="capture-overlay">
+  <div class="capture-box">
+    <textarea class="capture-input" id="capture-input"
+      placeholder="Capture anything — task, goal, idea, person, reminder, restaurant..." rows="2"></textarea>
+    <div class="capture-hint" id="capture-hint">↵ to capture · Esc to close</div>
+  </div>
+</div>
+
+<script src="/admin/js/auth.js"></script>
+<script>
+  requireAuth();
+
+  // Greeting
+  const hour = new Date().getHours();
+  document.getElementById('greeting').textContent =
+    hour < 12 ? 'Good morning.' : hour < 17 ? 'Good afternoon.' : 'Good evening.';
+
+  // Date subtitle
+  const now = new Date();
+  document.getElementById('date-sub').textContent = now.toLocaleDateString('en-US', {
+    weekday: 'long', month: 'long', day: 'numeric'
+  });
+
+  // Sign out
+  document.getElementById('logout-btn').addEventListener('click', e => {
+    e.preventDefault();
+    clearToken();
+    window.location.href = '/admin/index.html';
+  });
+
+  // Cmd+K capture overlay
+  const overlay = document.getElementById('capture-overlay');
+  const captureInput = document.getElementById('capture-input');
+  const captureHint = document.getElementById('capture-hint');
+
+  function openCapture() {
+    overlay.classList.add('open');
+    captureInput.value = '';
+    captureHint.textContent = '↵ to capture · Esc to close';
+    captureInput.focus();
+  }
+
+  function closeCapture() {
+    overlay.classList.remove('open');
+    captureInput.value = '';
+  }
+
+  document.addEventListener('keydown', e => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      e.preventDefault();
+      overlay.classList.contains('open') ? closeCapture() : openCapture();
+    }
+    if (e.key === 'Escape' && overlay.classList.contains('open')) {
+      closeCapture();
+    }
+  });
+
+  overlay.addEventListener('click', e => {
+    if (e.target === overlay) closeCapture();
+  });
+
+  captureInput.addEventListener('keydown', async e => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      const text = captureInput.value.trim();
+      if (!text) return;
+      captureHint.textContent = 'Saving...';
+      try {
+        const data = await apiPost('/api/theo-os/capture', { text });
+        captureHint.textContent = (data && data.message) ? data.message : 'Captured.';
+        captureInput.value = '';
+        setTimeout(() => closeCapture(), 1500);
+      } catch {
+        captureHint.textContent = 'Failed to save — check connection.';
+      }
+    }
+  });
+
+  // ---- Dashboard data ----
+
+  const AREAS = ['work', 'finances', 'health', 'relationships', 'growth', 'creative', 'exploration', 'life'];
+
+  const AREA_LABELS = {
+    work: 'Work', finances: 'Finances', health: 'Health',
+    relationships: 'Relationships', growth: 'Growth',
+    creative: 'Creative', exploration: 'Exploration', life: 'Life'
+  };
+
+  function fmtDate(iso) {
+    if (!iso) return null;
+    const [y, m, d] = iso.split('T')[0].split('-').map(Number);
+    return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+
+  function daysBetween(isoA, isoB) {
+    const a = new Date(isoA.split('T')[0]);
+    const b = new Date(isoB.split('T')[0]);
+    return Math.round((b - a) / 86400000);
+  }
+
+  function esc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // -- Briefing --
+
+  let pendingInsights = [];
+  let currentInsightIdx = 0;
+
+  async function loadBriefing() {
+    const data = await apiGet('/api/theo-os/briefing');
+    const bodyEl = document.getElementById('briefing-body');
+    const timeEl = document.getElementById('briefing-time');
+
+    if (!data) {
+      bodyEl.innerHTML = `<button class="briefing-generate" id="generate-btn">Generate briefing</button>`;
+      attachGenerateBtn();
+      return;
+    }
+
+    if (data.briefing) {
+      bodyEl.innerHTML = `<div class="briefing-body">${esc(data.briefing.text)}</div>`;
+      if (data.briefing.generated_at) {
+        const d = new Date(data.briefing.generated_at);
+        timeEl.textContent = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      }
+    } else {
+      bodyEl.innerHTML = `<button class="briefing-generate" id="generate-btn">Generate briefing</button>`;
+      attachGenerateBtn();
+    }
+  }
+
+  function attachGenerateBtn() {
+    document.getElementById('generate-btn')?.addEventListener('click', async () => {
+      const btn = document.getElementById('generate-btn');
+      if (btn) { btn.textContent = 'Generating...'; btn.disabled = true; }
+      const data = await apiPost('/api/theo-os/briefing', {});
+      const bodyEl = document.getElementById('briefing-body');
+      const timeEl = document.getElementById('briefing-time');
+      if (data && data.briefing) {
+        bodyEl.innerHTML = `<div class="briefing-body">${esc(data.briefing.text)}</div>`;
+        if (data.briefing.generated_at) {
+          const d = new Date(data.briefing.generated_at);
+          timeEl.textContent = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+      } else {
+        bodyEl.innerHTML = `<span class="briefing-loading">Could not generate briefing.</span>`;
+      }
+    });
+  }
+
+  // -- Life Health Grid --
+
+  function renderLifeHealth(areaActivity) {
+    const activityMap = {};
+    const today = new Date().toISOString().split('T')[0];
+
+    (areaActivity || []).forEach(row => {
+      activityMap[row.area] = row.last_active;
+    });
+
+    const grid = document.getElementById('life-health-grid');
+    grid.innerHTML = AREAS.map(area => {
+      const lastActive = activityMap[area];
+      let dotClass = 'inactive';
+      let subText = 'No recent activity';
+
+      if (lastActive) {
+        const days = daysBetween(lastActive.split('T')[0], today);
+        if (days <= 7) {
+          dotClass = 'active';
+        } else if (days <= 14) {
+          dotClass = 'semi';
+        } else {
+          dotClass = 'inactive';
+        }
+        subText = fmtDate(lastActive) || subText;
+      }
+
+      return `<div class="stat-card">
+        <div class="stat-label">
+          <span class="activity-dot ${dotClass}"></span>
+          ${AREA_LABELS[area]}
+        </div>
+        <div class="stat-sub">${subText}</div>
+      </div>`;
+    }).join('');
+  }
+
+  // -- Attention Section --
+
+  function renderAttention(data) {
+    const today = new Date().toISOString().split('T')[0];
+    const rows = [];
+
+    // Overdue tasks
+    const overdueCount = data.overdue_tasks || 0;
+    if (overdueCount > 0) {
+      rows.push(`<div class="attention-row urgent">
+        <span class="attention-dot urgent"></span>
+        <span class="attention-label">
+          ${overdueCount} overdue task${overdueCount !== 1 ? 's' : ''}
+        </span>
+        <a href="/admin/tasks.html" class="attention-days urgent" style="text-decoration:none">Review →</a>
+      </div>`);
+    }
+
+    // Overdue people
+    const overdueRelCount = data.overdue_people || 0;
+    if (overdueRelCount > 0) {
+      rows.push(`<div class="attention-row urgent">
+        <span class="attention-dot urgent"></span>
+        <span class="attention-label">
+          ${overdueRelCount} overdue relationship touch${overdueRelCount !== 1 ? 'points' : 'point'}
+        </span>
+        <a href="/admin/people.html" class="attention-days urgent" style="text-decoration:none">Review →</a>
+      </div>`);
+    }
+
+    // Upcoming items (next 14 days)
+    (data.upcoming || []).forEach(item => {
+      const days = daysBetween(today, item.due_date);
+      let urgency, dayLabel;
+      if (days <= 3) { urgency = 'urgent'; }
+      else if (days <= 7) { urgency = 'soon'; }
+      else { urgency = 'ok'; }
+
+      if (days === 0) dayLabel = 'due today';
+      else if (days === 1) dayLabel = 'due tomorrow';
+      else dayLabel = `in ${days}d`;
+
+      const typeLabel = item.type === 'goal' ? 'goal' : item.area;
+
+      rows.push(`<div class="attention-row ${urgency === 'urgent' ? 'urgent' : ''}">
+        <span class="attention-dot ${urgency}"></span>
+        <span class="attention-label">${esc(item.title)}<span>${esc(typeLabel)}</span></span>
+        <span class="attention-days ${urgency === 'urgent' ? 'urgent' : ''}">${dayLabel}</span>
+      </div>`);
+    });
+
+    const section = document.getElementById('attention-section');
+    if (rows.length === 0) {
+      section.innerHTML = `<div class="attention-empty">All clear.</div>`;
+    } else {
+      section.innerHTML = rows.join('');
+    }
+  }
+
+  // -- MindMapper Insight --
+
+  function renderInsight(insights) {
+    pendingInsights = (insights || []).filter(Boolean);
+    currentInsightIdx = 0;
+    showInsight();
+  }
+
+  function showInsight() {
+    const wrapper = document.getElementById('insight-wrapper');
+    if (currentInsightIdx >= pendingInsights.length) {
+      wrapper.style.display = 'none';
+      return;
+    }
+    const insight = pendingInsights[currentInsightIdx];
+    wrapper.style.display = '';
+    document.getElementById('insight-text').textContent = insight.insight || insight.body || insight.text || '';
+
+    const dismissBtn = document.getElementById('insight-dismiss');
+    dismissBtn.onclick = async () => {
+      await apiPut('/api/theo-os/insights', { id: insight.id });
+      currentInsightIdx++;
+      showInsight();
+    };
+  }
+
+  // -- Stats Breakdown --
+
+  function renderTaskBars(tasksByStatus) {
+    const TASK_STATUSES = ['today', 'this_week', 'inbox', 'someday'];
+    const STATUS_LABELS = { today: 'Today', this_week: 'This Week', inbox: 'Inbox', someday: 'Someday' };
+    const countMap = {};
+    (tasksByStatus || []).forEach(row => { countMap[row.status] = row.count; });
+    const max = Math.max(1, ...TASK_STATUSES.map(s => countMap[s] || 0));
+    document.getElementById('tasks-bars').innerHTML = TASK_STATUSES.map(s => {
+      const n = countMap[s] || 0;
+      return `<div class="stage-row">
+        <div class="stage-name">${STATUS_LABELS[s] || s}</div>
+        <div class="stage-bar-wrap"><div class="stage-bar" style="width:${Math.round((n/max)*100)}%"></div></div>
+        <div class="stage-count">${n}</div>
+      </div>`;
+    }).join('');
+  }
+
+  function renderGoalBars(goalsByArea) {
+    const activeByArea = {};
+    (goalsByArea || []).forEach(row => {
+      if (row.status === 'active') {
+        activeByArea[row.area] = (activeByArea[row.area] || 0) + row.count;
+      }
+    });
+    const areasWithGoals = AREAS.filter(a => activeByArea[a]);
+    if (areasWithGoals.length === 0) {
+      document.getElementById('goals-bars').innerHTML = `<div style="font-size:12px;color:var(--text-tertiary);padding:8px 0">No active goals.</div>`;
+      return;
+    }
+    const max = Math.max(1, ...areasWithGoals.map(a => activeByArea[a]));
+    document.getElementById('goals-bars').innerHTML = areasWithGoals.map(a => {
+      const n = activeByArea[a];
+      return `<div class="stage-row">
+        <div class="stage-name">${AREA_LABELS[a]}</div>
+        <div class="stage-bar-wrap"><div class="stage-bar" style="width:${Math.round((n/max)*100)}%"></div></div>
+        <div class="stage-count">${n}</div>
+      </div>`;
+    }).join('');
+  }
+
+  // -- Load all --
+
+  async function load() {
+    const [stats, briefingData] = await Promise.all([
+      apiGet('/api/theo-os/stats'),
+      apiGet('/api/theo-os/briefing'),
+    ]);
+
+    // Briefing
+    const bodyEl = document.getElementById('briefing-body');
+    const timeEl = document.getElementById('briefing-time');
+    if (briefingData && briefingData.briefing) {
+      bodyEl.innerHTML = `<div class="briefing-body">${esc(briefingData.briefing.text)}</div>`;
+      if (briefingData.briefing.generated_at) {
+        const d = new Date(briefingData.briefing.generated_at);
+        timeEl.textContent = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      }
+    } else {
+      bodyEl.innerHTML = `<button class="briefing-generate" id="generate-btn">Generate briefing</button>`;
+      attachGenerateBtn();
+    }
+
+    if (!stats) return;
+
+    renderLifeHealth(stats.area_activity);
+    renderAttention(stats);
+    renderInsight(stats.insights);
+    renderTaskBars(stats.tasks_by_status);
+    renderGoalBars(stats.goals_by_area);
+  }
+
+  load();
+
+  // Google connection status
+  function connectGoogle() {
+    const account = prompt('Account name (e.g. "primary", "work"):', 'primary');
+    if (!account) return;
+    window.location.href = `/api/theo-os/auth/google/connect?t=${encodeURIComponent(getToken())}&account=${encodeURIComponent(account)}`;
+  }
+
+  apiGet('/api/theo-os/auth/google/status').then(data => {
+    const btn = document.getElementById('google-connect-btn');
+    if (!btn) return;
+    btn.style.display = '';
+    if (data && data.connected) {
+      const emails = (data.accounts || []).map(a => a.email).join(', ');
+      btn.textContent = `${emails} · Add account →`;
+    } else {
+      btn.textContent = 'Connect Gmail + Calendar →';
+    }
+    btn.addEventListener('click', connectGoogle);
+  }).catch(() => {});
+</script>
+</body>
+</html>

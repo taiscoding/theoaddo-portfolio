@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>People — Theo OS</title>
+  <link rel="icon" href="/favicon.png">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/admin/css/admin.css">
+  <script>document.documentElement.setAttribute('data-theme', localStorage.getItem('theo_os_theme') || 'dark')</script>
+  <style>
+    /* Filter pills */
+    .filter-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+    .filter-pill {
+      font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.06em;
+      text-transform: uppercase; padding: 5px 12px; border-radius: 20px;
+      border: 1px solid var(--border-subtle); background: none;
+      color: var(--text-tertiary); cursor: pointer; transition: all 0.2s;
+    }
+    .filter-pill:hover { color: var(--text-secondary); border-color: var(--border-subtle); }
+    .filter-pill.active { background: var(--teal-subtle); color: var(--teal); border-color: var(--teal); }
+
+    /* Search */
+    .search-row {
+      display: flex; align-items: center; gap: 12px; margin-bottom: 16px;
+    }
+    .search-input {
+      flex: 1; max-width: 320px;
+      background: var(--void-surface); border: 1px solid var(--border-subtle);
+      border-radius: 8px; padding: 8px 14px; font-size: 13px;
+      color: var(--text-primary); font-family: var(--font-body); outline: none;
+      transition: border-color 0.2s;
+    }
+    .search-input:focus { border-color: var(--teal); }
+    .search-input::placeholder { color: var(--text-muted, rgba(255,255,255,0.25)); }
+
+    /* People grid */
+    .people-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-top: 24px;
+    }
+    @media (max-width: 1200px) { .people-grid { grid-template-columns: repeat(3, 1fr); } }
+    @media (max-width: 900px) { .people-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 600px) { .people-grid { grid-template-columns: 1fr; } }
+
+    /* Person card */
+    .person-card {
+      background: var(--void-elevated);
+      border: 1px solid var(--border-ghost);
+      border-radius: 10px;
+      padding: 18px;
+      cursor: pointer;
+      transition: border-color 0.2s, transform 0.1s;
+      position: relative;
+    }
+    .person-card:hover { border-color: var(--border-subtle); transform: translateY(-1px); }
+
+    /* Health dot */
+    .health-dot {
+      position: absolute; top: 14px; right: 14px;
+      width: 10px; height: 10px; border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .health-dot.green { background: var(--teal, #4fd1c5); }
+    .health-dot.yellow { background: #f5c842; }
+    .health-dot.red { background: var(--coral, #ff8a65); }
+    .health-dot.none { background: rgba(255,255,255,0.18); }
+
+    .person-name {
+      font-size: 15px; font-weight: 600; color: var(--text-primary);
+      margin-bottom: 4px; line-height: 1.4; padding-right: 20px;
+    }
+
+    .person-relationship {
+      font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary);
+      text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px;
+    }
+
+    .person-meta {
+      font-size: 12px; color: var(--text-tertiary); line-height: 1.6;
+    }
+    .person-meta span { display: block; }
+
+    /* Empty state */
+    .empty-state {
+      grid-column: 1 / -1; text-align: center;
+      padding: 60px 20px; color: var(--text-tertiary);
+      font-size: 14px;
+    }
+
+    /* Drawer */
+    .drawer-backdrop {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.55);
+      z-index: 100; display: none; backdrop-filter: blur(2px);
+    }
+    .drawer-backdrop.open { display: block; }
+
+    .drawer {
+      position: fixed; top: 0; right: 0; bottom: 0;
+      width: 420px; max-width: 100vw;
+      background: var(--void-elevated);
+      border-left: 1px solid var(--border-subtle);
+      z-index: 101;
+      display: flex; flex-direction: column;
+      transform: translateX(100%);
+      transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+      overflow: hidden;
+    }
+    .drawer.open { transform: translateX(0); }
+
+    .drawer-header {
+      padding: 20px 24px 16px;
+      border-bottom: 1px solid var(--border-ghost);
+      flex-shrink: 0;
+    }
+    .drawer-close {
+      position: absolute; top: 16px; right: 18px;
+      background: none; border: none; color: var(--text-tertiary);
+      cursor: pointer; font-size: 20px; line-height: 1;
+      padding: 4px 8px; border-radius: 4px; transition: color 0.2s;
+    }
+    .drawer-close:hover { color: var(--text-primary); }
+
+    .drawer-body {
+      flex: 1; overflow-y: auto; padding: 20px 24px;
+    }
+
+    .drawer-footer {
+      padding: 16px 24px;
+      border-top: 1px solid var(--border-ghost);
+      flex-shrink: 0;
+      display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+    }
+
+    /* Form fields inside drawer */
+    .form-field { margin-bottom: 16px; }
+    .form-label {
+      display: block; font-family: var(--font-mono); font-size: 11px;
+      letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary);
+      margin-bottom: 6px;
+    }
+    .form-input {
+      width: 100%; background: var(--void-surface); border: 1px solid var(--border-subtle);
+      border-radius: 6px; padding: 9px 12px; font-size: 14px; color: var(--text-primary);
+      font-family: var(--font-body); outline: none; transition: border-color 0.2s;
+      box-sizing: border-box;
+    }
+    .form-input:focus { border-color: var(--teal); }
+    textarea.form-input { resize: vertical; min-height: 80px; }
+
+    .drawer-title { font-size: 20px; font-weight: 700; font-family: var(--font-display); color: var(--text-primary); margin-bottom: 4px; }
+
+    .drawer-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    .input-suffix {
+      display: flex; align-items: center; gap: 8px;
+    }
+    .input-suffix .form-input { flex: 1; }
+    .input-suffix-label {
+      font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary);
+      white-space: nowrap; letter-spacing: 0.05em;
+    }
+
+    .btn-sm {
+      font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.06em;
+      text-transform: uppercase; padding: 7px 14px; border-radius: 6px;
+      border: 1px solid var(--border-subtle); background: none;
+      color: var(--text-secondary); cursor: pointer; transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .btn-sm:hover { color: var(--text-primary); border-color: var(--border-subtle); }
+    .btn-primary {
+      background: var(--teal); color: #000; border-color: var(--teal); font-weight: 600;
+    }
+    .btn-primary:hover { opacity: 0.85; color: #000; }
+    .btn-ghost { background: none; }
+    .btn-danger {
+      background: rgba(255,138,101,0.12); color: var(--coral);
+      border: 1px solid rgba(255,138,101,0.3);
+    }
+    .btn-danger:hover { background: rgba(255,138,101,0.22); opacity: 1; }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+      z-index: 200; display: none; align-items: center; justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--void-elevated); border: 1px solid var(--border-subtle);
+      border-radius: 12px; padding: 28px; width: 480px; max-width: 95vw;
+    }
+    .modal-title {
+      font-family: var(--font-display); font-size: 18px; font-weight: 700;
+      margin-bottom: 20px; color: var(--text-primary);
+    }
+    .modal-footer {
+      display: flex; gap: 10px; justify-content: flex-end; margin-top: 24px;
+    }
+
+    .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+    .add-btn {
+      font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.06em;
+      text-transform: uppercase; padding: 9px 16px; border-radius: 8px;
+      border: 1px solid var(--teal); background: var(--teal-subtle);
+      color: var(--teal); cursor: pointer; transition: all 0.2s;
+    }
+    .add-btn:hover { background: var(--teal); color: #000; }
+
+    /* Reach-out section */
+    .reachout-section { margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border-ghost); }
+    .reachout-draft {
+      margin-top: 12px;
+      width: 100%; background: var(--void-surface); border: 1px solid var(--border-subtle);
+      border-radius: 6px; padding: 9px 12px; font-size: 14px; color: var(--text-primary);
+      font-family: var(--font-body); outline: none; resize: vertical; min-height: 100px;
+      display: none; box-sizing: border-box;
+    }
+    .reachout-draft:focus { border-color: var(--teal); }
+    .reachout-draft.visible { display: block; }
+  </style>
+</head>
+<body>
+<div class="shell">
+  <nav class="sidebar">
+    <div class="sidebar-logo">THEO OS</div>
+
+    <div class="sidebar-label">Overview</div>
+    <a href="/admin/dashboard.html" class="sidebar-link">Dashboard</a>
+    <a href="/admin/capture.html" class="sidebar-link">Quick Capture</a>
+
+    <div class="sidebar-label">Life</div>
+    <a href="/admin/tasks.html" class="sidebar-link">Tasks</a>
+    <a href="/admin/goals.html" class="sidebar-link">Goals</a>
+    <a href="/admin/people.html" class="sidebar-link active">People</a>
+    <a href="/admin/collections.html" class="sidebar-link">Collections</a>
+
+    <div class="sidebar-label">Mind</div>
+    <a href="/admin/journal.html" class="sidebar-link">Journal</a>
+    <a href="/admin/vision.html" class="sidebar-link">Life Vision</a>
+    <a href="/admin/review.html" class="sidebar-link">Weekly Review</a>
+
+    <div class="sidebar-label">Inbox</div>
+    <a href="/admin/email.html" class="sidebar-link">Email Triage</a>
+
+    <div class="sidebar-label">Intelligence</div>
+    <a href="/admin/chat.html" class="sidebar-link">Chat</a>
+
+    <div class="sidebar-label" style="margin-top:24px">Account</div>
+    <button class="theme-toggle" id="theme-toggle"></button>
+    <a href="#" class="sidebar-link" id="logout-btn">Sign out</a>
+  </nav>
+
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <h1 class="page-title">People</h1>
+        <p style="color: var(--text-tertiary); font-size: 13px; margin-top: 4px;">The relationships worth keeping.</p>
+      </div>
+      <button class="add-btn" id="new-person-btn">+ Add Person</button>
+    </div>
+
+    <!-- Search -->
+    <div class="search-row">
+      <input class="search-input" type="search" id="people-search" placeholder="Search by name..." autocomplete="off" aria-label="Search people">
+    </div>
+
+    <!-- Health filter pills -->
+    <div class="filter-bar" id="health-filter-bar">
+      <button class="filter-pill active" data-health="all">All</button>
+      <button class="filter-pill" data-health="green">Green</button>
+      <button class="filter-pill" data-health="yellow">Yellow</button>
+      <button class="filter-pill" data-health="red">Red</button>
+    </div>
+
+    <!-- People grid -->
+    <div class="people-grid" id="people-grid"></div>
+  </main>
+</div>
+
+<!-- New Person Modal -->
+<div class="modal-overlay" id="new-person-modal" role="dialog" aria-modal="true" aria-labelledby="np-modal-title">
+  <div class="modal">
+    <div class="modal-title" id="np-modal-title">Add Person</div>
+
+    <div class="form-field">
+      <label class="form-label" for="np-name">Name *</label>
+      <input class="form-input" type="text" id="np-name" placeholder="Full name" autocomplete="off">
+    </div>
+
+    <div class="form-field">
+      <label class="form-label" for="np-relationship">Relationship</label>
+      <input class="form-input" type="text" id="np-relationship" placeholder="e.g. Friend, Mentor, Colleague" autocomplete="off">
+    </div>
+
+    <div class="drawer-row">
+      <div class="form-field">
+        <label class="form-label" for="np-last-contact">Last Contact</label>
+        <input class="form-input" type="date" id="np-last-contact">
+      </div>
+      <div class="form-field">
+        <label class="form-label" for="np-interval">Touchpoint Interval</label>
+        <div class="input-suffix">
+          <input class="form-input" type="number" id="np-interval" placeholder="30" min="1" step="1">
+          <span class="input-suffix-label">days</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-sm btn-ghost" id="np-cancel-btn">Cancel</button>
+      <button class="btn-sm btn-primary" id="np-save-btn">Add Person</button>
+    </div>
+  </div>
+</div>
+
+<!-- Detail Drawer -->
+<div class="drawer-backdrop" id="drawer-backdrop"></div>
+<aside class="drawer" id="person-drawer" role="dialog" aria-modal="true" aria-label="Person details">
+  <div class="drawer-header">
+    <div class="drawer-title" id="d-name-display"></div>
+    <button class="drawer-close" id="drawer-close-btn" aria-label="Close">&times;</button>
+  </div>
+  <div class="drawer-body">
+    <div class="form-field">
+      <label class="form-label" for="d-name">Name</label>
+      <input class="form-input" type="text" id="d-name" autocomplete="off">
+    </div>
+
+    <div class="form-field">
+      <label class="form-label" for="d-relationship">Relationship</label>
+      <input class="form-input" type="text" id="d-relationship" placeholder="e.g. Friend, Mentor, Colleague" autocomplete="off">
+    </div>
+
+    <div class="form-field">
+      <label class="form-label" for="d-notes">Notes</label>
+      <textarea class="form-input" id="d-notes" rows="4" placeholder="What do you know about them? What do you want to remember?"></textarea>
+    </div>
+
+    <div class="drawer-row">
+      <div class="form-field">
+        <label class="form-label" for="d-last-contact">Last Contact</label>
+        <input class="form-input" type="date" id="d-last-contact">
+      </div>
+      <div class="form-field">
+        <label class="form-label" for="d-next-touchpoint">Next Touchpoint</label>
+        <input class="form-input" type="date" id="d-next-touchpoint">
+      </div>
+    </div>
+
+    <div class="form-field">
+      <label class="form-label" for="d-interval">Touchpoint Interval</label>
+      <div class="input-suffix">
+        <input class="form-input" type="number" id="d-interval" placeholder="e.g. 30" min="1" step="1">
+        <span class="input-suffix-label">days</span>
+      </div>
+    </div>
+
+    <!-- Reach-out section -->
+    <div class="reachout-section">
+      <button class="btn-sm" id="d-reachout-btn">Draft Reach-Out</button>
+      <textarea class="reachout-draft" id="d-reachout-draft" placeholder="AI draft will appear here..."></textarea>
+    </div>
+  </div>
+
+  <div class="drawer-footer">
+    <button class="btn-sm btn-danger" id="d-delete-btn">Delete Person</button>
+    <div style="flex:1"></div>
+    <button class="btn-sm btn-ghost" id="d-cancel-btn">Discard</button>
+    <button class="btn-sm btn-primary" id="d-save-btn">Save Changes</button>
+  </div>
+</aside>
+
+<script src="/admin/js/auth.js"></script>
+<script>
+  requireAuth();
+
+  document.getElementById('logout-btn').addEventListener('click', e => {
+    e.preventDefault();
+    clearToken();
+    window.location.href = '/admin/index.html';
+  });
+
+  // ---- State ----
+  let allPeople = [];
+  let activeHealth = 'all';
+  let searchQuery = '';
+  let drawerPersonId = null;
+
+  // ---- Helpers ----
+
+  function esc(s) {
+    return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function daysAgo(dateStr) {
+    if (!dateStr) return 'Never';
+    const days = Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
+    if (days === 0) return 'Today';
+    if (days === 1) return 'Yesterday';
+    return `${days} days ago`;
+  }
+
+  function fmtDate(d) {
+    if (!d) return '';
+    const [y, m, day] = d.split('-').map(Number);
+    return new Date(y, m - 1, day).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  // ---- Filter and render ----
+
+  function visiblePeople() {
+    return allPeople.filter(p => {
+      if (activeHealth !== 'all' && p.health !== activeHealth) return false;
+      if (searchQuery && !p.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+      return true;
+    });
+  }
+
+  function renderGrid() {
+    const people = visiblePeople();
+    const grid = document.getElementById('people-grid');
+
+    if (people.length === 0) {
+      const msg = allPeople.length === 0
+        ? 'No people yet. Add the people you want to stay close to.'
+        : 'No people match your filters.';
+      grid.innerHTML = `<div class="empty-state">${msg}</div>`;
+      return;
+    }
+
+    grid.innerHTML = people.map(p => {
+      const health = p.health || 'none';
+      const relLine = p.relationship
+        ? `<div class="person-relationship">${esc(p.relationship)}</div>`
+        : '<div class="person-relationship" style="opacity:0;height:1em"></div>';
+
+      const contactLine = `<span>Last contact: ${esc(daysAgo(p.last_contact))}</span>`;
+      const nextLine = p.next_touchpoint
+        ? `<span>Next: ${esc(fmtDate(p.next_touchpoint))}</span>`
+        : '';
+      const intervalLine = p.touchpoint_interval_days
+        ? `<span>Every ${p.touchpoint_interval_days} days</span>`
+        : '';
+
+      return `<div class="person-card" data-id="${p.id}" role="button" tabindex="0" aria-label="${esc(p.name)}">
+        <div class="health-dot ${health}" title="Health: ${health}"></div>
+        <div class="person-name">${esc(p.name)}</div>
+        ${relLine}
+        <div class="person-meta">
+          ${contactLine}
+          ${nextLine}
+          ${intervalLine}
+        </div>
+      </div>`;
+    }).join('');
+
+    grid.querySelectorAll('.person-card').forEach(card => {
+      card.addEventListener('click', () => openDrawer(Number(card.dataset.id)));
+      card.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') openDrawer(Number(card.dataset.id));
+      });
+    });
+  }
+
+  // ---- Filters ----
+
+  document.getElementById('health-filter-bar').addEventListener('click', e => {
+    const pill = e.target.closest('.filter-pill');
+    if (!pill) return;
+    document.querySelectorAll('#health-filter-bar .filter-pill').forEach(p => p.classList.remove('active'));
+    pill.classList.add('active');
+    activeHealth = pill.dataset.health;
+    renderGrid();
+  });
+
+  document.getElementById('people-search').addEventListener('input', e => {
+    searchQuery = e.target.value;
+    renderGrid();
+  });
+
+  // ---- Load data ----
+
+  async function loadPeople() {
+    const data = await apiGet('/api/theo-os/people');
+    allPeople = data || [];
+    renderGrid();
+  }
+
+  // ---- New person modal ----
+
+  const newPersonModal = document.getElementById('new-person-modal');
+  const npName = document.getElementById('np-name');
+
+  document.getElementById('new-person-btn').addEventListener('click', () => {
+    npName.value = '';
+    document.getElementById('np-relationship').value = '';
+    document.getElementById('np-last-contact').value = '';
+    document.getElementById('np-interval').value = '';
+    newPersonModal.classList.add('open');
+    npName.focus();
+  });
+
+  document.getElementById('np-cancel-btn').addEventListener('click', () => {
+    newPersonModal.classList.remove('open');
+  });
+
+  newPersonModal.addEventListener('click', e => {
+    if (e.target === newPersonModal) newPersonModal.classList.remove('open');
+  });
+
+  document.getElementById('np-save-btn').addEventListener('click', async () => {
+    const name = npName.value.trim();
+    if (!name) { npName.focus(); return; }
+
+    const intervalRaw = document.getElementById('np-interval').value;
+    const interval = intervalRaw ? parseInt(intervalRaw, 10) : null;
+    if (interval !== null && (isNaN(interval) || interval < 1)) {
+      document.getElementById('np-interval').focus();
+      return;
+    }
+
+    const saveBtn = document.getElementById('np-save-btn');
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Adding...';
+
+    try {
+      const created = await apiPost('/api/theo-os/people', {
+        name,
+        relationship: document.getElementById('np-relationship').value.trim() || null,
+        last_contact: document.getElementById('np-last-contact').value || null,
+        touchpoint_interval_days: interval
+      });
+      if (created) {
+        allPeople.push(created);
+        allPeople.sort((a, b) => a.name.localeCompare(b.name));
+        renderGrid();
+        newPersonModal.classList.remove('open');
+      }
+    } finally {
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Add Person';
+    }
+  });
+
+  // ---- Drawer ----
+
+  const drawer = document.getElementById('person-drawer');
+  const backdrop = document.getElementById('drawer-backdrop');
+
+  function openDrawer(id) {
+    const person = allPeople.find(p => p.id === id);
+    if (!person) return;
+    drawerPersonId = id;
+
+    document.getElementById('d-name-display').textContent = person.name;
+    document.getElementById('d-name').value = person.name || '';
+    document.getElementById('d-relationship').value = person.relationship || '';
+    document.getElementById('d-notes').value = person.notes || '';
+    document.getElementById('d-last-contact').value = person.last_contact || '';
+    document.getElementById('d-next-touchpoint').value = person.next_touchpoint || '';
+    document.getElementById('d-interval').value = person.touchpoint_interval_days || '';
+
+    const draftArea = document.getElementById('d-reachout-draft');
+    draftArea.value = '';
+    draftArea.classList.remove('visible');
+    document.getElementById('d-reachout-btn').textContent = 'Draft Reach-Out';
+
+    backdrop.classList.add('open');
+    drawer.classList.add('open');
+    document.getElementById('d-name').focus();
+  }
+
+  function closeDrawer() {
+    backdrop.classList.remove('open');
+    drawer.classList.remove('open');
+    drawerPersonId = null;
+  }
+
+  document.getElementById('drawer-close-btn').addEventListener('click', closeDrawer);
+  document.getElementById('d-cancel-btn').addEventListener('click', closeDrawer);
+  backdrop.addEventListener('click', closeDrawer);
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && drawer.classList.contains('open')) closeDrawer();
+    if (e.key === 'Escape' && newPersonModal.classList.contains('open')) newPersonModal.classList.remove('open');
+  });
+
+  // ---- Save drawer changes ----
+
+  document.getElementById('d-save-btn').addEventListener('click', async () => {
+    if (!drawerPersonId) return;
+
+    const name = document.getElementById('d-name').value.trim();
+    if (!name) { document.getElementById('d-name').focus(); return; }
+
+    const intervalRaw = document.getElementById('d-interval').value;
+    const interval = intervalRaw ? parseInt(intervalRaw, 10) : null;
+    if (interval !== null && (isNaN(interval) || interval < 1)) {
+      document.getElementById('d-interval').focus();
+      return;
+    }
+
+    const saveBtn = document.getElementById('d-save-btn');
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving...';
+
+    try {
+      const updated = await apiPatch(`/api/theo-os/people/${drawerPersonId}`, {
+        name,
+        relationship: document.getElementById('d-relationship').value.trim() || null,
+        notes: document.getElementById('d-notes').value.trim() || null,
+        last_contact: document.getElementById('d-last-contact').value || null,
+        next_touchpoint: document.getElementById('d-next-touchpoint').value || null,
+        touchpoint_interval_days: interval
+      });
+      if (updated) {
+        const idx = allPeople.findIndex(p => p.id === drawerPersonId);
+        if (idx !== -1) allPeople[idx] = updated;
+        allPeople.sort((a, b) => a.name.localeCompare(b.name));
+        renderGrid();
+        closeDrawer();
+      }
+    } finally {
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Save Changes';
+    }
+  });
+
+  // ---- Delete person ----
+
+  document.getElementById('d-delete-btn').addEventListener('click', async () => {
+    if (!drawerPersonId) return;
+    const person = allPeople.find(p => p.id === drawerPersonId);
+    const name = person ? person.name : 'this person';
+    if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
+    const id = drawerPersonId;
+    const ok = await apiDelete(`/api/theo-os/people/${id}`);
+    if (ok) {
+      allPeople = allPeople.filter(p => p.id !== id);
+      closeDrawer();
+      renderGrid();
+    } else {
+      alert('Failed to delete. Please try again.');
+    }
+  });
+
+  // ---- Draft reach-out ----
+
+  document.getElementById('d-reachout-btn').addEventListener('click', async () => {
+    if (!drawerPersonId) return;
+    const btn = document.getElementById('d-reachout-btn');
+    const draftArea = document.getElementById('d-reachout-draft');
+
+    btn.disabled = true;
+    btn.textContent = 'Drafting...';
+
+    try {
+      const result = await apiPost(`/api/theo-os/people/${drawerPersonId}/reach-out`, {});
+      if (result && result.draft) {
+        draftArea.value = result.draft;
+        draftArea.classList.add('visible');
+        btn.textContent = 'Regenerate';
+      } else {
+        btn.textContent = 'Draft Reach-Out';
+      }
+    } catch {
+      btn.textContent = 'Draft Reach-Out';
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  // ---- Init ----
+  loadPeople();
+
+  // Cmd+K capture overlay
+  (function() {
+    const overlay = document.getElementById('capture-overlay');
+    const captureInput = document.getElementById('capture-input');
+    const captureHint = document.getElementById('capture-hint');
+    function openCapture() {
+      overlay.classList.add('open');
+      captureInput.value = '';
+      captureHint.textContent = '↵ to capture · Esc to close';
+      captureInput.focus();
+    }
+    function closeCapture() { overlay.classList.remove('open'); captureInput.value = ''; }
+    document.addEventListener('keydown', e => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); overlay.classList.contains('open') ? closeCapture() : openCapture(); }
+      if (e.key === 'Escape' && overlay.classList.contains('open')) closeCapture();
+    });
+    overlay.addEventListener('click', e => { if (e.target === overlay) closeCapture(); });
+    captureInput.addEventListener('keydown', async e => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        const text = captureInput.value.trim();
+        if (!text) return;
+        captureHint.textContent = 'Saving...';
+        try {
+          const data = await apiPost('/api/theo-os/capture', { text });
+          captureHint.textContent = (data && data.message) ? data.message : 'Captured.';
+          captureInput.value = '';
+          setTimeout(() => closeCapture(), 1500);
+        } catch { captureHint.textContent = 'Failed to save — check connection.'; }
+      }
+    });
+  })();
+
+</script>
+
+<!-- Cmd+K capture overlay -->
+<div class="capture-overlay" id="capture-overlay">
+  <div class="capture-box">
+    <textarea class="capture-input" id="capture-input"
+      placeholder="Capture anything — task, goal, idea, person, reminder, restaurant..." rows="2"></textarea>
+    <div class="capture-hint" id="capture-hint">↵ to capture · Esc to close</div>
+  </div>
+</div>
+</body>
+</html>

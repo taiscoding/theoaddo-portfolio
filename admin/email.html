@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Email Triage — Theo OS</title>
+  <link rel="icon" href="/favicon.png">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/admin/css/admin.css">
+  <script>document.documentElement.setAttribute('data-theme', localStorage.getItem('theo_os_theme') || 'dark')</script>
+  <style>
+    /* Filter pills */
+    .filter-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 24px; }
+    .filter-pill {
+      font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.06em;
+      text-transform: uppercase; padding: 5px 12px; border-radius: 20px;
+      border: 1px solid var(--border-subtle); background: none;
+      color: var(--text-tertiary); cursor: pointer; transition: all 0.2s;
+    }
+    .filter-pill:hover { color: var(--text-secondary); border-color: var(--border-subtle); }
+    .filter-pill.active { background: var(--teal-subtle); color: var(--teal); border-color: var(--teal); }
+
+    /* Fetch button area */
+    .fetch-area { display: flex; align-items: center; gap: 12px; }
+    .fetch-btn {
+      padding: 9px 20px; background: var(--teal); color: #000;
+      font-family: var(--font-display); font-size: 13px; font-weight: 600;
+      border: none; border-radius: 6px; cursor: pointer; transition: opacity 0.2s;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .fetch-btn:hover { opacity: 0.85; }
+    .fetch-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .fetch-status {
+      font-family: var(--font-mono); font-size: 12px;
+      color: var(--text-tertiary); min-width: 140px;
+    }
+
+    /* Spinner */
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner {
+      width: 14px; height: 14px; border: 2px solid rgba(0,0,0,0.3);
+      border-top-color: #000; border-radius: 50%;
+      animation: spin 0.7s linear infinite; flex-shrink: 0;
+    }
+
+    /* No-auth callout */
+    .callout {
+      background: rgba(255,138,101,0.08); border: 1px solid rgba(255,138,101,0.25);
+      border-radius: 8px; padding: 14px 18px; font-size: 13px;
+      color: var(--coral); margin-bottom: 24px; line-height: 1.5;
+    }
+
+    /* Email feed */
+    .email-feed { display: flex; flex-direction: column; gap: 14px; }
+
+    /* Email card */
+    .email-card {
+      background: var(--void-elevated); border: 1px solid var(--border-ghost);
+      border-radius: 10px; padding: 20px 22px;
+      transition: border-color 0.2s;
+    }
+    .email-card:hover { border-color: var(--border-subtle); }
+
+    .email-header {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      gap: 12px; margin-bottom: 6px;
+    }
+    .email-sender {
+      display: flex; flex-direction: column; gap: 2px; min-width: 0;
+    }
+    .email-from-name {
+      font-size: 13px; font-weight: 600; color: var(--text-primary);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .email-from-addr {
+      font-family: var(--font-mono); font-size: 11px;
+      color: var(--text-tertiary);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+
+    .urgency-badge {
+      display: inline-block; font-family: var(--font-mono); font-size: 10px;
+      padding: 3px 9px; border-radius: 3px; font-weight: 500;
+      text-transform: uppercase; letter-spacing: 0.06em; flex-shrink: 0;
+    }
+    .urgency-high { background: rgba(255,138,101,0.15); color: var(--coral); }
+    .urgency-medium { background: rgba(245,200,66,0.12); color: #f5c842; }
+    .urgency-low { background: var(--teal-subtle); color: var(--teal); }
+
+    .email-subject {
+      font-size: 14px; font-weight: 600; color: var(--text-primary);
+      margin-bottom: 6px; line-height: 1.4;
+    }
+    .email-snippet {
+      font-size: 13px; color: var(--text-secondary); line-height: 1.55;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+      overflow: hidden; margin-bottom: 14px;
+    }
+
+    .draft-label {
+      font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em;
+      text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 7px;
+    }
+    .draft-textarea {
+      width: 100%; background: var(--void-surface); border: 1px solid var(--border-subtle);
+      border-radius: 6px; padding: 11px 14px; font-size: 13px;
+      color: var(--text-primary); font-family: var(--font-body);
+      line-height: 1.6; resize: vertical; min-height: 88px;
+      outline: none; transition: border-color 0.2s; margin-bottom: 14px;
+    }
+    .draft-textarea:focus { border-color: var(--teal); }
+    .draft-save-hint {
+      font-family: var(--font-mono); font-size: 10px; color: var(--text-tertiary);
+      margin-bottom: 14px; display: none;
+    }
+    .draft-save-hint.visible { display: block; }
+
+    .email-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .action-btn {
+      padding: 7px 14px; font-size: 12px; font-family: var(--font-display);
+      font-weight: 600; border: none; border-radius: 6px; cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .action-btn:hover { opacity: 0.8; }
+    .action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-send { background: var(--teal); color: #000; }
+    .btn-dismiss { background: var(--void-surface); color: var(--text-secondary); border: 1px solid var(--border-subtle); }
+    .btn-task { background: rgba(187,143,206,0.15); color: var(--purple); border: 1px solid rgba(187,143,206,0.25); }
+
+    /* Empty state */
+    .empty-state {
+      text-align: center; padding: 64px 24px;
+      color: var(--text-tertiary); font-size: 14px; line-height: 1.6;
+    }
+    .empty-state-icon { font-size: 28px; margin-bottom: 12px; }
+
+    /* Quick-task modal form */
+    .form-field { margin-bottom: 18px; }
+    .form-label {
+      display: block; font-family: var(--font-mono); font-size: 11px;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--text-tertiary); margin-bottom: 7px;
+    }
+    .form-input {
+      width: 100%; background: var(--void-surface); border: 1px solid var(--border-subtle);
+      border-radius: 6px; padding: 10px 14px; font-size: 14px;
+      color: var(--text-primary); font-family: var(--font-body);
+      outline: none; transition: border-color 0.2s;
+    }
+    .form-input:focus { border-color: var(--teal); }
+  </style>
+</head>
+<body>
+<div class="shell">
+  <nav class="sidebar">
+    <div class="sidebar-logo">THEO OS</div>
+
+    <div class="sidebar-label">Overview</div>
+    <a href="/admin/dashboard.html" class="sidebar-link">Dashboard</a>
+    <a href="/admin/capture.html" class="sidebar-link">Quick Capture</a>
+
+    <div class="sidebar-label">Life</div>
+    <a href="/admin/tasks.html" class="sidebar-link">Tasks</a>
+    <a href="/admin/goals.html" class="sidebar-link">Goals</a>
+    <a href="/admin/people.html" class="sidebar-link">People</a>
+    <a href="/admin/collections.html" class="sidebar-link">Collections</a>
+
+    <div class="sidebar-label">Mind</div>
+    <a href="/admin/journal.html" class="sidebar-link">Journal</a>
+    <a href="/admin/vision.html" class="sidebar-link">Life Vision</a>
+    <a href="/admin/review.html" class="sidebar-link">Weekly Review</a>
+
+    <div class="sidebar-label">Inbox</div>
+    <a href="/admin/email.html" class="sidebar-link active">Email Triage</a>
+
+    <div class="sidebar-label">Intelligence</div>
+    <a href="/admin/chat.html" class="sidebar-link">Chat</a>
+
+    <div class="sidebar-label" style="margin-top:24px">Account</div>
+    <button class="theme-toggle" id="theme-toggle"></button>
+    <a href="#" class="sidebar-link" id="logout-btn">Sign out</a>
+  </nav>
+
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <h1 class="page-title">Email Triage</h1>
+        <p class="page-sub">Your inbox, staged for action.</p>
+      </div>
+      <div class="fetch-area">
+        <button class="fetch-btn" id="fetch-btn">
+          Fetch &amp; Stage
+        </button>
+        <span class="fetch-status" id="fetch-status"></span>
+      </div>
+    </div>
+
+    <!-- Google not connected callout (hidden by default) -->
+    <div class="callout" id="no-auth-callout" style="display:none">
+      Google account not connected.
+      <button id="email-connect-btn" style="background:none;border:none;color:var(--teal);font:inherit;cursor:pointer;padding:0;margin-left:8px">Connect Google →</button>
+    </div>
+
+    <!-- Status filter pills -->
+    <div class="filter-bar" id="filter-bar">
+      <button class="filter-pill active" data-status="pending">Pending</button>
+      <button class="filter-pill" data-status="sent">Sent</button>
+      <button class="filter-pill" data-status="dismissed">Dismissed</button>
+    </div>
+
+    <!-- Email feed -->
+    <div class="email-feed" id="email-feed"></div>
+  </main>
+</div>
+
+<!-- Convert-to-Task modal -->
+<div class="modal-overlay" id="task-modal" style="display:none" role="dialog" aria-modal="true" aria-labelledby="task-modal-title">
+  <div class="modal">
+    <div class="modal-title" id="task-modal-title">Create Task from Email</div>
+
+    <div class="form-field">
+      <label class="form-label" for="task-title-field">Title</label>
+      <input class="form-input" type="text" id="task-title-field" autocomplete="off">
+    </div>
+
+    <div class="form-field">
+      <label class="form-label" for="task-area-field">Area</label>
+      <select class="form-input" id="task-area-field">
+        <option value="">None</option>
+        <option value="work">Work</option>
+        <option value="finances">Finances</option>
+        <option value="health">Health</option>
+        <option value="relationships">Relationships</option>
+        <option value="growth">Growth</option>
+        <option value="creative">Creative</option>
+        <option value="exploration">Exploration</option>
+        <option value="life">Life</option>
+      </select>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-sm btn-ghost" id="task-modal-cancel">Cancel</button>
+      <button class="btn-sm btn-primary" id="task-modal-save">Create Task</button>
+    </div>
+  </div>
+</div>
+
+<script src="/admin/js/auth.js"></script>
+<script>
+  requireAuth();
+
+  document.getElementById('logout-btn').addEventListener('click', e => {
+    e.preventDefault();
+    clearToken();
+    window.location.href = '/admin/index.html';
+  });
+
+  // ---- State ----
+  let activeStatus = 'pending';
+  let taskModalDraftId = null;
+
+  // ---- Helpers ----
+  function esc(s) {
+    return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function urgencyClass(u) {
+    if (u === 'high') return 'urgency-high';
+    if (u === 'low') return 'urgency-low';
+    return 'urgency-medium';
+  }
+
+  // ---- Load drafts ----
+  async function loadDrafts() {
+    const data = await apiGet(`/api/theo-os/email/drafts?status=${activeStatus}`);
+    if (data === null) return; // error handled by apiGet
+    renderFeed(data);
+  }
+
+  function renderFeed(drafts) {
+    const feed = document.getElementById('email-feed');
+    if (!drafts.length) {
+      if (activeStatus === 'pending') {
+        feed.innerHTML = `<div class="empty-state">
+          <div class="empty-state-icon">&#9993;</div>
+          Inbox clear. Hit 'Fetch &amp; Stage' to check for new emails.
+        </div>`;
+      } else {
+        feed.innerHTML = `<div class="empty-state">No ${activeStatus} emails.</div>`;
+      }
+      return;
+    }
+
+    feed.innerHTML = drafts.map(d => `
+      <div class="email-card" data-id="${d.id}">
+        <div class="email-header">
+          <div class="email-sender">
+            <div class="email-from-name">${esc(d.from_name || d.from_address)}</div>
+            ${d.from_name ? `<div class="email-from-addr">${esc(d.from_address)}</div>` : ''}
+          </div>
+          <span class="urgency-badge ${urgencyClass(d.urgency)}">${esc(d.urgency || 'medium')}</span>
+        </div>
+
+        <div class="email-subject">${esc(d.subject)}</div>
+        <div class="email-snippet">${esc(d.snippet)}</div>
+
+        <div class="draft-label">Draft Reply</div>
+        <textarea class="draft-textarea" data-id="${d.id}" aria-label="Draft reply">${esc(d.draft || '')}</textarea>
+        <div class="draft-save-hint" id="hint-${d.id}">Saving...</div>
+
+        ${activeStatus === 'pending' ? `
+        <div class="email-actions">
+          <button class="action-btn btn-send" data-id="${d.id}" data-action="send">Send</button>
+          <button class="action-btn btn-dismiss" data-id="${d.id}" data-action="dismiss">Dismiss</button>
+          <button class="action-btn btn-task" data-id="${d.id}" data-subject="${esc(d.subject)}" data-action="task">Convert to Task</button>
+        </div>` : ''}
+      </div>
+    `).join('');
+
+    // Auto-save draft on blur
+    feed.querySelectorAll('.draft-textarea').forEach(ta => {
+      let originalValue = ta.value;
+      ta.addEventListener('focus', () => { originalValue = ta.value; });
+      ta.addEventListener('blur', async () => {
+        if (ta.value === originalValue) return;
+        const id = ta.dataset.id;
+        const hint = document.getElementById(`hint-${id}`);
+        if (hint) { hint.textContent = 'Saving...'; hint.classList.add('visible'); }
+        const result = await apiPatch(`/api/theo-os/email/${id}/draft`, { draft: ta.value });
+        if (hint) {
+          hint.textContent = result ? 'Saved.' : 'Save failed.';
+          setTimeout(() => hint.classList.remove('visible'), 2000);
+        }
+        originalValue = ta.value;
+      });
+    });
+
+    // Action buttons
+    feed.querySelectorAll('.action-btn').forEach(btn => {
+      btn.addEventListener('click', () => handleAction(btn));
+    });
+  }
+
+  async function handleAction(btn) {
+    const id = Number(btn.dataset.id);
+    const action = btn.dataset.action;
+    const card = btn.closest('.email-card');
+
+    if (action === 'send') {
+      btn.disabled = true;
+      btn.textContent = 'Sending...';
+      const result = await apiPost(`/api/theo-os/email/${id}/send`, {});
+      if (result && result.ok) {
+        card.style.opacity = '0.4';
+        card.style.transition = 'opacity 0.3s';
+        setTimeout(() => { card.remove(); maybeShowEmpty(); }, 320);
+      } else {
+        btn.disabled = false;
+        btn.textContent = 'Send';
+        alert('Failed to send. Check console for details.');
+      }
+    }
+
+    if (action === 'dismiss') {
+      btn.disabled = true;
+      const result = await apiPost(`/api/theo-os/email/${id}/dismiss`, {});
+      if (result && result.ok) {
+        card.style.opacity = '0.4';
+        card.style.transition = 'opacity 0.3s';
+        setTimeout(() => { card.remove(); maybeShowEmpty(); }, 320);
+      } else {
+        btn.disabled = false;
+        alert('Failed to dismiss.');
+      }
+    }
+
+    if (action === 'task') {
+      taskModalDraftId = id;
+      document.getElementById('task-title-field').value = btn.dataset.subject || '';
+      document.getElementById('task-area-field').value = '';
+      document.getElementById('task-modal').style.display = 'flex';
+      document.getElementById('task-title-field').focus();
+    }
+  }
+
+  function maybeShowEmpty() {
+    const feed = document.getElementById('email-feed');
+    if (!feed.querySelector('.email-card')) {
+      renderFeed([]);
+    }
+  }
+
+  // ---- Fetch & Stage ----
+  document.getElementById('fetch-btn').addEventListener('click', async () => {
+    const btn = document.getElementById('fetch-btn');
+    const statusEl = document.getElementById('fetch-status');
+    const noAuth = document.getElementById('no-auth-callout');
+
+    btn.disabled = true;
+    btn.innerHTML = '<div class="spinner"></div> Fetching...';
+    statusEl.textContent = '';
+    noAuth.style.display = 'none';
+
+    let res;
+    try {
+      res = await fetch('/api/theo-os/email/triage', {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({})
+      });
+    } catch {
+      btn.disabled = false;
+      btn.innerHTML = 'Fetch &amp; Stage';
+      statusEl.textContent = 'Network error.';
+      return;
+    }
+
+    btn.disabled = false;
+    btn.innerHTML = 'Fetch &amp; Stage';
+
+    if (res.status === 401) { clearToken(); window.location.href = '/admin/index.html'; return; }
+
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      const msg = data.error || '';
+      if (res.status === 400 && msg.toLowerCase().includes('google')) {
+        noAuth.style.display = 'block';
+      } else {
+        statusEl.textContent = msg || 'Failed.';
+      }
+      return;
+    }
+
+    const count = data.staged || 0;
+    statusEl.textContent = count === 0 ? 'Nothing new.' : `${count} staged.`;
+
+    // Reload the pending list
+    if (activeStatus === 'pending') await loadDrafts();
+  });
+
+  // ---- Filter pills ----
+  document.getElementById('filter-bar').addEventListener('click', e => {
+    const pill = e.target.closest('.filter-pill');
+    if (!pill) return;
+    document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+    pill.classList.add('active');
+    activeStatus = pill.dataset.status;
+    loadDrafts();
+  });
+
+  // ---- Task modal ----
+  const taskModal = document.getElementById('task-modal');
+
+  document.getElementById('task-modal-cancel').addEventListener('click', () => {
+    taskModal.style.display = 'none';
+    taskModalDraftId = null;
+  });
+
+  taskModal.addEventListener('click', e => {
+    if (e.target === taskModal) {
+      taskModal.style.display = 'none';
+      taskModalDraftId = null;
+    }
+  });
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && taskModal.style.display === 'flex') {
+      taskModal.style.display = 'none';
+      taskModalDraftId = null;
+    }
+  });
+
+  document.getElementById('task-modal-save').addEventListener('click', async () => {
+    const title = document.getElementById('task-title-field').value.trim();
+    if (!title) { document.getElementById('task-title-field').focus(); return; }
+
+    const saveBtn = document.getElementById('task-modal-save');
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Creating...';
+
+    const area = document.getElementById('task-area-field').value || null;
+    const created = await apiPost('/api/theo-os/tasks', { title, area, status: 'inbox' });
+
+    saveBtn.disabled = false;
+    saveBtn.textContent = 'Create Task';
+
+    if (created) {
+      taskModal.style.display = 'none';
+      taskModalDraftId = null;
+    } else {
+      alert('Failed to create task.');
+    }
+  });
+
+  // ---- Google connect button ----
+  document.getElementById('email-connect-btn')?.addEventListener('click', () => {
+    const account = prompt('Account name (e.g. "primary", "work"):', 'primary');
+    if (!account) return;
+    window.location.href = `/api/theo-os/auth/google/connect?t=${encodeURIComponent(getToken())}&account=${encodeURIComponent(account)}`;
+  });
+
+  // ---- Init ----
+  loadDrafts();
+
+  // Cmd+K capture overlay
+  (function() {
+    const overlay = document.getElementById('capture-overlay');
+    const captureInput = document.getElementById('capture-input');
+    const captureHint = document.getElementById('capture-hint');
+    function openCapture() {
+      overlay.classList.add('open');
+      captureInput.value = '';
+      captureHint.textContent = '↵ to capture · Esc to close';
+      captureInput.focus();
+    }
+    function closeCapture() { overlay.classList.remove('open'); captureInput.value = ''; }
+    document.addEventListener('keydown', e => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); overlay.classList.contains('open') ? closeCapture() : openCapture(); }
+      if (e.key === 'Escape' && overlay.classList.contains('open')) closeCapture();
+    });
+    overlay.addEventListener('click', e => { if (e.target === overlay) closeCapture(); });
+    captureInput.addEventListener('keydown', async e => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        const text = captureInput.value.trim();
+        if (!text) return;
+        captureHint.textContent = 'Saving...';
+        try {
+          const data = await apiPost('/api/theo-os/capture', { text });
+          captureHint.textContent = (data && data.message) ? data.message : 'Captured.';
+          captureInput.value = '';
+          setTimeout(() => closeCapture(), 1500);
+        } catch { captureHint.textContent = 'Failed to save — check connection.'; }
+      }
+    });
+  })();
+
+</script>
+
+<!-- Cmd+K capture overlay -->
+<div class="capture-overlay" id="capture-overlay">
+  <div class="capture-box">
+    <textarea class="capture-input" id="capture-input"
+      placeholder="Capture anything — task, goal, idea, person, reminder, restaurant..." rows="2"></textarea>
+    <div class="capture-hint" id="capture-hint">↵ to capture · Esc to close</div>
+  </div>
+</div>
+</body>
+</html>
