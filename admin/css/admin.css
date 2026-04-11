@@ -202,4 +202,5 @@ textarea { resize: vertical; min-height: 80px; }
 
   /* Prevent iOS auto-zoom on input focus (triggered when font-size < 16px) */
   input, select, textarea { font-size: 16px !important; }
+  input[type="date"] { text-align: left; display: block; -webkit-appearance: none; }
 }
