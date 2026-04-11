@@ -570,24 +570,23 @@
   load();
 
   // Google connection status
+  function connectGoogle() {
+    const account = prompt('Account name (e.g. "primary", "work"):', 'primary');
+    if (!account) return;
+    window.location.href = `/api/theo-os/auth/google/connect?t=${encodeURIComponent(getToken())}&account=${encodeURIComponent(account)}`;
+  }
+
   apiGet('/api/theo-os/auth/google/status').then(data => {
     const btn = document.getElementById('google-connect-btn');
     if (!btn) return;
+    btn.style.display = '';
     if (data && data.connected) {
       const emails = (data.accounts || []).map(a => a.email).join(', ');
-      btn.textContent = `Google: ${emails} ✓`;
-      btn.style.display = '';
-      btn.style.color = 'var(--teal)';
-      btn.disabled = true;
+      btn.textContent = `${emails} · Add account →`;
     } else {
-      btn.style.display = '';
-      btn.addEventListener('click', () => {
-        const account = prompt('Account name (e.g. "primary", "work"):', 'primary');
-        if (!account) return;
-        const token = getToken();
-        window.location.href = `/api/theo-os/auth/google/connect?t=${encodeURIComponent(token)}&account=${encodeURIComponent(account)}`;
-      });
+      btn.textContent = 'Connect Gmail + Calendar →';
     }
+    btn.addEventListener('click', connectGoogle);
   }).catch(() => {});
 </script>
 </body>
