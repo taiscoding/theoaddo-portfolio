@@ -105,6 +105,8 @@ CREATE TABLE IF NOT EXISTS knowledge_notes (
   last_reviewed TEXT DEFAULT (datetime('now')),
   decay_score REAL DEFAULT 1.0,
   next_review TEXT,
+  ease_factor REAL DEFAULT 2.5,
+  last_score INTEGER DEFAULT 0,
   created_at TEXT DEFAULT (datetime('now'))
 );
 
