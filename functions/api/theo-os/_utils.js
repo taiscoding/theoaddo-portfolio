@@ -3,7 +3,7 @@ export function json(data, status = 200) {
     status,
     headers: {
       'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*'
+      'Access-Control-Allow-Origin': 'https://theoaddo.com'
     }
   });
 }
@@ -13,8 +13,10 @@ export function err(message, status = 400) {
 }
 
 function b64url(buf) {
-  return btoa(String.fromCharCode(...new Uint8Array(buf)))
-    .replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+  let s = '';
+  const bytes = new Uint8Array(buf);
+  for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
+  return btoa(s).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
 }
 
 function encodeObj(obj) {
@@ -37,6 +39,11 @@ export async function verifyJWT(token, secret) {
   const parts = token.split('.');
   if (parts.length !== 3) return null;
   const [header, payload, sig] = parts;
+  let hdr;
+  try {
+    hdr = JSON.parse(atob(header.replace(/-/g, '+').replace(/_/g, '/')));
+  } catch { return null; }
+  if (hdr.alg !== 'HS256' || hdr.typ !== 'JWT') return null;
   const key = await crypto.subtle.importKey(
     'raw', new TextEncoder().encode(secret),
     { name: 'HMAC', hash: 'SHA-256' }, false, ['verify']
@@ -100,7 +107,10 @@ export async function getGoogleToken(env) {
     })
   });
   const refreshed = await res.json();
-  if (!refreshed.access_token) return null;
+  if (!refreshed.access_token) {
+    await env.THEO_OS_KV.delete('google_tokens');
+    return null;
+  }
   const updated = { ...tokens, ...refreshed, expiry_date: Date.now() + refreshed.expires_in * 1000 };
   await env.THEO_OS_KV.put('google_tokens', JSON.stringify(updated), { expirationTtl: 30 * 24 * 3600 });
   return refreshed.access_token;

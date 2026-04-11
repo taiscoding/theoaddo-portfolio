@@ -125,3 +125,16 @@ CREATE TABLE IF NOT EXISTS connections (
   inferred INTEGER DEFAULT 1,
   created_at TEXT DEFAULT (datetime('now'))
 );
+
+-- Indexes for common query patterns
+CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
+CREATE INDEX IF NOT EXISTS idx_tasks_area ON tasks(area);
+CREATE INDEX IF NOT EXISTS idx_tasks_due_date ON tasks(due_date);
+CREATE INDEX IF NOT EXISTS idx_tasks_goal_id ON tasks(goal_id);
+CREATE INDEX IF NOT EXISTS idx_milestones_goal_id ON milestones(goal_id);
+CREATE INDEX IF NOT EXISTS idx_insights_dismissed ON insights_log(dismissed);
+CREATE INDEX IF NOT EXISTS idx_journal_created_at ON journal(created_at);
+CREATE INDEX IF NOT EXISTS idx_connections_from ON connections(from_type, from_id);
+CREATE INDEX IF NOT EXISTS idx_connections_to ON connections(to_type, to_id);
+CREATE INDEX IF NOT EXISTS idx_people_next_touchpoint ON people(next_touchpoint);
+CREATE INDEX IF NOT EXISTS idx_email_drafts_status ON email_drafts(status);

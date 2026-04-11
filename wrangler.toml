@@ -1,5 +1,6 @@
 name = "theoaddo-com"
 pages_build_output_dir = "."
+compatibility_date = "2025-01-01"
 
 [[d1_databases]]
 binding = "THEO_OS_DB"
