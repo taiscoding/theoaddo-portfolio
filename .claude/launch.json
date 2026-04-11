@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "portfolio",
+      "runtimeExecutable": "/usr/bin/python3",
+      "runtimeArgs": ["-m", "http.server", "3001"],
+      "port": 3001
+    },
+    {
+      "name": "theo-os",
+      "runtimeExecutable": "/bin/sh",
+      "runtimeArgs": ["-c", "cd /Users/theodoreaddo/theoaddo.com/.worktrees/theo-os && python3 -m http.server 3002"],
+      "port": 3002
+    }
+  ]
+}

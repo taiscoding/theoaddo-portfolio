@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Collections — Theo OS</title>
+  <link rel="icon" href="/favicon.png">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/admin/css/admin.css">
+  <script>document.documentElement.setAttribute('data-theme', localStorage.getItem('theo_os_theme') || 'dark')</script>
+  <style>
+    /* Tab bar */
+    .tab-bar {
+      display: flex; gap: 0; border-bottom: 1px solid var(--border-ghost);
+      margin-bottom: 24px; overflow-x: auto;
+    }
+    .tab-btn {
+      font-family: var(--font-mono); font-size: 11px; font-weight: 500;
+      letter-spacing: 0.07em; text-transform: uppercase;
+      padding: 10px 18px; background: none; border: none;
+      border-bottom: 2px solid transparent; color: var(--text-tertiary);
+      cursor: pointer; transition: all 0.2s; white-space: nowrap;
+      margin-bottom: -1px;
+    }
+    .tab-btn:hover { color: var(--text-secondary); }
+    .tab-btn.active { color: var(--teal); border-bottom-color: var(--teal); }
+    .tab-count {
+      display: inline-block; background: var(--void-surface);
+      border-radius: 10px; padding: 1px 7px; font-size: 10px;
+      margin-left: 6px; color: var(--text-tertiary);
+    }
+    .tab-btn.active .tab-count { background: var(--teal-subtle); color: var(--teal); }
+
+    /* Status filter pills */
+    .filter-bar { display: flex; gap: 8px; margin-bottom: 24px; }
+    .filter-pill {
+      font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.06em;
+      text-transform: uppercase; padding: 5px 12px; border-radius: 20px;
+      border: 1px solid var(--border-subtle); background: none;
+      color: var(--text-tertiary); cursor: pointer; transition: all 0.2s;
+    }
+    .filter-pill:hover { color: var(--text-secondary); }
+    .filter-pill.active { background: var(--teal-subtle); color: var(--teal); border-color: var(--teal); }
+
+    /* Collection grid */
+    .collection-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 14px;
+      align-items: start;
+    }
+
+    /* Card wrapper for inline expand */
+    .card-wrapper { display: contents; }
+
+    /* Collection card */
+    .coll-card {
+      background: var(--bg-card, var(--void-elevated));
+      border: 1px solid var(--border-ghost);
+      border-radius: 10px; padding: 16px;
+      cursor: pointer; transition: border-color 0.2s, background 0.2s;
+      user-select: none;
+    }
+    .coll-card:hover { border-color: var(--border-subtle); }
+    .coll-card.expanded { border-color: var(--teal); border-radius: 10px 10px 0 0; }
+
+    .coll-title {
+      font-size: 14px; font-weight: 600; color: var(--text-primary);
+      margin-bottom: 6px; line-height: 1.4;
+    }
+    .coll-source {
+      font-size: 12px; color: var(--text-tertiary); margin-bottom: 8px;
+    }
+    .coll-notes {
+      font-size: 12px; color: var(--text-secondary); line-height: 1.6;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+      overflow: hidden; margin-bottom: 10px;
+    }
+    .coll-footer { display: flex; align-items: center; justify-content: space-between; }
+
+    /* Status badges */
+    .badge-want {
+      display: inline-block; font-family: var(--font-mono); font-size: 10px;
+      padding: 2px 8px; border-radius: 3px; font-weight: 500;
+      background: var(--teal-subtle); color: var(--teal);
+      border: 1px solid rgba(78,205,196,0.2);
+    }
+    .badge-done {
+      display: inline-block; font-family: var(--font-mono); font-size: 10px;
+      padding: 2px 8px; border-radius: 3px; font-weight: 500;
+      background: rgba(34,197,94,0.12); color: #22c55e;
+      border: 1px solid rgba(34,197,94,0.2);
+    }
+
+    /* Expand panel */
+    .expand-panel {
+      background: var(--void-space);
+      border: 1px solid var(--teal);
+      border-top: none;
+      border-radius: 0 0 10px 10px;
+      padding: 16px;
+      display: none;
+    }
+    .expand-panel.open { display: block; }
+
+    /* Expand panel sits adjacent in the grid via full-column span trick */
+    .expand-row {
+      grid-column: 1 / -1;
+      display: none;
+    }
+    .expand-row.open { display: block; }
+
+    /* Inner expand layout */
+    .expand-inner {
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    .expand-label {
+      font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em;
+      text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 5px;
+      display: block;
+    }
+    .expand-input {
+      width: 100%; background: var(--void-surface); border: 1px solid var(--border-subtle);
+      border-radius: 6px; padding: 8px 12px; font-size: 13px; color: var(--text-primary);
+      font-family: var(--font-body); outline: none; transition: border-color 0.2s;
+    }
+    .expand-input:focus { border-color: var(--teal); }
+    textarea.expand-input { resize: vertical; min-height: 72px; }
+
+    .expand-actions {
+      display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+      padding-top: 4px;
+    }
+    .btn-status-toggle {
+      padding: 7px 14px; font-size: 12px; font-family: var(--font-display); font-weight: 600;
+      border: none; border-radius: 6px; cursor: pointer; transition: opacity 0.2s;
+      background: var(--teal-subtle); color: var(--teal);
+      border: 1px solid rgba(78,205,196,0.3);
+    }
+    .btn-status-toggle:hover { opacity: 0.8; }
+    .btn-delete-expand {
+      padding: 7px 14px; font-size: 12px; font-family: var(--font-display); font-weight: 600;
+      border: 1px solid rgba(255,138,101,0.3); border-radius: 6px; cursor: pointer;
+      transition: opacity 0.2s; background: rgba(255,138,101,0.12); color: var(--coral);
+      margin-left: auto;
+    }
+    .btn-delete-expand:hover { background: rgba(255,138,101,0.22); opacity: 1; }
+
+    /* Empty state */
+    .empty-state {
+      grid-column: 1 / -1; padding: 48px 0; text-align: center;
+      color: var(--text-tertiary); font-size: 14px;
+    }
+
+    /* Modal form */
+    .form-field { margin-bottom: 18px; }
+    .form-label {
+      display: block; font-family: var(--font-mono); font-size: 11px;
+      letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary);
+      margin-bottom: 7px;
+    }
+    .form-input {
+      width: 100%; background: var(--void-surface); border: 1px solid var(--border-subtle);
+      border-radius: 6px; padding: 10px 14px; font-size: 14px; color: var(--text-primary);
+      font-family: var(--font-body); outline: none; transition: border-color 0.2s;
+    }
+    .form-input:focus { border-color: var(--teal); }
+    textarea.form-input { resize: vertical; min-height: 80px; }
+
+    /* Saving indicator */
+    .save-indicator {
+      font-family: var(--font-mono); font-size: 10px; color: var(--text-tertiary);
+      transition: opacity 0.3s; opacity: 0;
+    }
+    .save-indicator.visible { opacity: 1; }
+  </style>
+</head>
+<body>
+<div class="shell">
+  <nav class="sidebar">
+    <div class="sidebar-logo">THEO OS</div>
+
+    <div class="sidebar-label">Overview</div>
+    <a href="/admin/dashboard.html" class="sidebar-link">Dashboard</a>
+    <a href="/admin/capture.html" class="sidebar-link">Quick Capture</a>
+
+    <div class="sidebar-label">Life</div>
+    <a href="/admin/tasks.html" class="sidebar-link">Tasks</a>
+    <a href="/admin/goals.html" class="sidebar-link">Goals</a>
+    <a href="/admin/people.html" class="sidebar-link">People</a>
+    <a href="/admin/collections.html" class="sidebar-link active">Collections</a>
+
+    <div class="sidebar-label">Mind</div>
+    <a href="/admin/journal.html" class="sidebar-link">Journal</a>
+    <a href="/admin/vision.html" class="sidebar-link">Life Vision</a>
+    <a href="/admin/review.html" class="sidebar-link">Weekly Review</a>
+
+    <div class="sidebar-label">Inbox</div>
+    <a href="/admin/email.html" class="sidebar-link">Email Triage</a>
+
+    <div class="sidebar-label">Intelligence</div>
+    <a href="/admin/chat.html" class="sidebar-link">Chat</a>
+    <a href="/admin/model.html" class="sidebar-link">The Theo Model</a>
+    <a href="/admin/knowledge.html" class="sidebar-link">Knowledge</a>
+    <a href="/admin/learn.html" class="sidebar-link">Learn</a>
+    <a href="/admin/graph.html" class="sidebar-link">Knowledge Graph</a>
+
+    <div class="sidebar-label" style="margin-top:24px">Account</div>
+    <button class="theme-toggle" id="theme-toggle"></button>
+    <a href="#" class="sidebar-link" id="logout-btn">Sign out</a>
+  </nav>
+
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <h1 class="page-title">Collections</h1>
+        <p class="page-sub">Places, things, and ideas worth saving.</p>
+      </div>
+      <button class="add-btn" id="add-btn">+ Add</button>
+    </div>
+
+    <!-- Tab bar -->
+    <div class="tab-bar" id="tab-bar" role="tablist">
+      <button class="tab-btn active" data-type="restaurant" role="tab" aria-selected="true">
+        Restaurants <span class="tab-count" id="count-restaurant">0</span>
+      </button>
+      <button class="tab-btn" data-type="travel" role="tab" aria-selected="false">
+        Travel <span class="tab-count" id="count-travel">0</span>
+      </button>
+      <button class="tab-btn" data-type="movie" role="tab" aria-selected="false">
+        Movies &amp; TV <span class="tab-count" id="count-movie">0</span>
+      </button>
+      <button class="tab-btn" data-type="book" role="tab" aria-selected="false">
+        Books <span class="tab-count" id="count-book">0</span>
+      </button>
+      <button class="tab-btn" data-type="idea" role="tab" aria-selected="false">
+        Ideas <span class="tab-count" id="count-idea">0</span>
+      </button>
+    </div>
+
+    <!-- Status filter -->
+    <div class="filter-bar" id="filter-bar">
+      <button class="filter-pill active" data-status="all">All</button>
+      <button class="filter-pill" data-status="want">Want</button>
+      <button class="filter-pill" data-status="done">Done</button>
+    </div>
+
+    <!-- Grid -->
+    <div class="collection-grid" id="collection-grid"></div>
+  </main>
+</div>
+
+<!-- Add modal -->
+<div class="modal-overlay" id="add-modal" style="display:none" role="dialog" aria-modal="true" aria-labelledby="modal-title-text">
+  <div class="modal">
+    <h2 class="modal-title" id="modal-title-text">Add Item</h2>
+    <div class="form-field">
+      <label class="form-label" for="field-title">Title *</label>
+      <input class="form-input" id="field-title" type="text" placeholder="What is it?" autocomplete="off">
+    </div>
+    <div class="form-field">
+      <label class="form-label" for="field-source">Source</label>
+      <input class="form-input" id="field-source" type="text" placeholder="Where did you hear about it?">
+    </div>
+    <div class="form-field">
+      <label class="form-label" for="field-notes">Notes</label>
+      <textarea class="form-input" id="field-notes" placeholder="Any details..."></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-sm btn-ghost" id="modal-cancel-btn">Cancel</button>
+      <button class="btn-sm btn-primary" id="modal-save-btn">Save</button>
+    </div>
+  </div>
+</div>
+
+<script src="/admin/js/auth.js"></script>
+<script>
+  requireAuth();
+
+  document.getElementById('logout-btn').addEventListener('click', e => {
+    e.preventDefault();
+    clearToken();
+    window.location.href = '/admin/index.html';
+  });
+
+  // ---- State ----
+  let allItems = [];
+  let activeType = 'restaurant';
+  let activeStatus = 'all';
+  let expandedId = null;
+
+  const TYPE_LABELS = {
+    restaurant: 'Restaurant',
+    travel: 'Travel',
+    movie: 'Movie/TV',
+    book: 'Book',
+    idea: 'Idea'
+  };
+
+  const TYPE_PLURALS = {
+    restaurant: 'restaurants',
+    travel: 'travel destinations',
+    movie: 'movies or shows',
+    book: 'books',
+    idea: 'ideas'
+  };
+
+  // ---- Helpers ----
+  function esc(str) {
+    return String(str || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function itemsForType(type) {
+    return allItems.filter(i => i.type === type);
+  }
+
+  function filteredItems() {
+    return allItems.filter(i => {
+      if (i.type !== activeType) return false;
+      if (activeStatus !== 'all' && i.status !== activeStatus) return false;
+      return true;
+    });
+  }
+
+  // ---- Update tab counts ----
+  function updateCounts() {
+    ['restaurant', 'travel', 'movie', 'book', 'idea'].forEach(type => {
+      document.getElementById('count-' + type).textContent = itemsForType(type).length;
+    });
+  }
+
+  // ---- Update add button label ----
+  function updateAddBtn() {
+    document.getElementById('add-btn').textContent = '+ Add ' + TYPE_LABELS[activeType];
+  }
+
+  // ---- Render grid ----
+  function renderGrid() {
+    const grid = document.getElementById('collection-grid');
+    const items = filteredItems();
+
+    if (items.length === 0) {
+      grid.innerHTML = `<div class="empty-state">No ${TYPE_PLURALS[activeType]} saved yet. Add the first one above.</div>`;
+      return;
+    }
+
+    // Build each card. We need to handle inline expand logic.
+    // Strategy: render cards as flat siblings, and after each card insert an expand row
+    // that spans the full grid width. We use JS to position the expand row immediately
+    // after the clicked card's row.
+    let html = '';
+    items.forEach(item => {
+      const badgeHtml = item.status === 'done'
+        ? '<span class="badge-done">Done</span>'
+        : '<span class="badge-want">Want</span>';
+
+      html += `
+        <div class="coll-card${expandedId === item.id ? ' expanded' : ''}"
+             data-id="${item.id}"
+             role="button" tabindex="0"
+             aria-expanded="${expandedId === item.id ? 'true' : 'false'}"
+             aria-label="${esc(item.title)}">
+          <div class="coll-title">${esc(item.title)}</div>
+          ${item.source ? `<div class="coll-source">via ${esc(item.source)}</div>` : ''}
+          ${item.notes ? `<div class="coll-notes">${esc(item.notes)}</div>` : ''}
+          <div class="coll-footer">${badgeHtml}</div>
+        </div>`;
+    });
+
+    grid.innerHTML = html;
+
+    // Attach card click listeners
+    grid.querySelectorAll('.coll-card').forEach(card => {
+      card.addEventListener('click', () => toggleExpand(Number(card.dataset.id)));
+      card.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          toggleExpand(Number(card.dataset.id));
+        }
+      });
+    });
+
+    // If something is expanded, inject the expand panel after the card
+    if (expandedId !== null) {
+      injectExpandPanel();
+    }
+  }
+
+  // ---- Expand / collapse ----
+  function toggleExpand(id) {
+    if (expandedId === id) {
+      expandedId = null;
+    } else {
+      expandedId = id;
+    }
+    renderGrid();
+  }
+
+  function injectExpandPanel() {
+    const item = allItems.find(i => i.id === expandedId);
+    if (!item) return;
+
+    const grid = document.getElementById('collection-grid');
+    const card = grid.querySelector(`.coll-card[data-id="${expandedId}"]`);
+    if (!card) return;
+
+    const toggleLabel = item.status === 'want' ? 'Mark Done' : 'Mark Want';
+
+    const panel = document.createElement('div');
+    panel.className = 'expand-row open';
+    panel.id = 'expand-panel-' + item.id;
+    panel.innerHTML = `
+      <div class="expand-panel open">
+        <div class="expand-inner">
+          <div>
+            <label class="expand-label" for="expand-notes-${item.id}">Notes</label>
+            <textarea class="expand-input" id="expand-notes-${item.id}" rows="4"></textarea>
+            <span class="save-indicator" id="save-ind-notes-${item.id}">Saved</span>
+          </div>
+          <div>
+            <label class="expand-label" for="expand-source-${item.id}">Source</label>
+            <input class="expand-input" type="text" id="expand-source-${item.id}" value="${esc(item.source || '')}">
+            <span class="save-indicator" id="save-ind-source-${item.id}">Saved</span>
+          </div>
+          <div class="expand-actions">
+            <button class="btn-status-toggle" data-id="${item.id}" data-current="${item.status}">${toggleLabel}</button>
+            <button class="btn-delete-expand" data-id="${item.id}">Delete</button>
+          </div>
+        </div>
+      </div>`;
+
+    // Insert after the card
+    card.insertAdjacentElement('afterend', panel);
+
+    // Set textarea value via JS to avoid HTML entity encoding issues
+    const notesEl = panel.querySelector(`#expand-notes-${item.id}`);
+    notesEl.value = item.notes || '';
+
+    // Auto-save on blur for notes
+    notesEl.addEventListener('blur', async () => {
+      const val = notesEl.value.trim() || null;
+      if (val === (item.notes || null)) return;
+      const updated = await apiPatch(`/api/theo-os/collections/${item.id}`, { notes: val });
+      if (updated) {
+        const idx = allItems.findIndex(i => i.id === item.id);
+        if (idx !== -1) { allItems[idx] = updated; item = updated; }
+        showSaved(`save-ind-notes-${item.id}`, false);
+      } else {
+        showSaved(`save-ind-notes-${item.id}`, true);
+      }
+    });
+
+    // Auto-save on blur for source
+    const sourceEl = panel.querySelector(`#expand-source-${item.id}`);
+    sourceEl.addEventListener('blur', async () => {
+      const val = sourceEl.value.trim() || null;
+      if (val === (item.source || null)) return;
+      const updated = await apiPatch(`/api/theo-os/collections/${item.id}`, { source: val });
+      if (updated) {
+        const idx = allItems.findIndex(i => i.id === item.id);
+        if (idx !== -1) { allItems[idx] = updated; item = updated; }
+        showSaved(`save-ind-source-${item.id}`, false);
+      } else {
+        showSaved(`save-ind-source-${item.id}`, true);
+      }
+    });
+
+    // Status toggle
+    panel.querySelector('.btn-status-toggle').addEventListener('click', async (e) => {
+      const btn = e.currentTarget;
+      const newStatus = btn.dataset.current === 'want' ? 'done' : 'want';
+      btn.disabled = true;
+      const updated = await apiPatch(`/api/theo-os/collections/${item.id}`, { status: newStatus });
+      if (updated) {
+        const idx = allItems.findIndex(i => i.id === item.id);
+        if (idx !== -1) allItems[idx] = updated;
+        updateCounts();
+        renderGrid();
+      } else {
+        btn.disabled = false;
+      }
+    });
+
+    // Delete
+    panel.querySelector('.btn-delete-expand').addEventListener('click', async (e) => {
+      const id = Number(e.currentTarget.dataset.id);
+      const it = allItems.find(i => i.id === id);
+      if (!confirm(`Delete "${it ? it.title : 'this item'}"? This cannot be undone.`)) return;
+      const ok = await apiDelete(`/api/theo-os/collections/${id}`);
+      if (ok) {
+        allItems = allItems.filter(i => i.id !== id);
+        expandedId = null;
+        updateCounts();
+        renderGrid();
+      }
+    });
+  }
+
+  function showSaved(indicatorId, isError = false) {
+    const el = document.getElementById(indicatorId);
+    if (!el) return;
+    el.textContent = isError ? 'Save failed' : 'Saved';
+    el.style.color = isError ? 'var(--coral)' : 'var(--teal)';
+    el.classList.add('visible');
+    setTimeout(() => el.classList.remove('visible'), 1500);
+  }
+
+  // ---- Tab switching ----
+  document.getElementById('tab-bar').addEventListener('click', e => {
+    const btn = e.target.closest('.tab-btn');
+    if (!btn) return;
+    document.querySelectorAll('.tab-btn').forEach(b => {
+      b.classList.remove('active');
+      b.setAttribute('aria-selected', 'false');
+    });
+    btn.classList.add('active');
+    btn.setAttribute('aria-selected', 'true');
+    activeType = btn.dataset.type;
+    expandedId = null;
+    updateAddBtn();
+    renderGrid();
+  });
+
+  // ---- Status filter ----
+  document.getElementById('filter-bar').addEventListener('click', e => {
+    const pill = e.target.closest('.filter-pill');
+    if (!pill) return;
+    document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+    pill.classList.add('active');
+    activeStatus = pill.dataset.status;
+    expandedId = null;
+    renderGrid();
+  });
+
+  // ---- Add modal ----
+  const modal = document.getElementById('add-modal');
+  const fieldTitle = document.getElementById('field-title');
+  const fieldSource = document.getElementById('field-source');
+  const fieldNotes = document.getElementById('field-notes');
+
+  function openModal() {
+    fieldTitle.value = '';
+    fieldSource.value = '';
+    fieldNotes.value = '';
+    document.getElementById('modal-title-text').textContent = 'Add ' + TYPE_LABELS[activeType];
+    modal.style.display = 'flex';
+    fieldTitle.focus();
+  }
+
+  function closeModal() {
+    modal.style.display = 'none';
+  }
+
+  document.getElementById('add-btn').addEventListener('click', openModal);
+  document.getElementById('modal-cancel-btn').addEventListener('click', closeModal);
+  modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && modal.style.display === 'flex') closeModal();
+  });
+
+  document.getElementById('modal-save-btn').addEventListener('click', async () => {
+    const title = fieldTitle.value.trim();
+    if (!title) { fieldTitle.focus(); return; }
+
+    const saveBtn = document.getElementById('modal-save-btn');
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving...';
+
+    try {
+      const created = await apiPost('/api/theo-os/collections', {
+        type: activeType,
+        title,
+        source: fieldSource.value.trim() || null,
+        notes: fieldNotes.value.trim() || null,
+        status: 'want'
+      });
+      if (created) {
+        allItems.unshift(created);
+        updateCounts();
+        closeModal();
+        // Make sure the active filter can show the new item
+        if (activeStatus === 'done') {
+          document.querySelector('.filter-pill[data-status="all"]').click();
+        } else {
+          renderGrid();
+        }
+      }
+    } finally {
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Save';
+    }
+  });
+
+  // ---- Load ----
+  async function loadCollections() {
+    const data = await apiGet('/api/theo-os/collections');
+    allItems = data || [];
+    updateCounts();
+    updateAddBtn();
+    renderGrid();
+  }
+
+  loadCollections();
+
+  // Cmd+K capture overlay
+  (function() {
+    const overlay = document.getElementById('capture-overlay');
+    const captureInput = document.getElementById('capture-input');
+    const captureHint = document.getElementById('capture-hint');
+    function openCapture() {
+      overlay.classList.add('open');
+      captureInput.value = '';
+      captureHint.textContent = '↵ to capture · Esc to close';
+      captureInput.focus();
+    }
+    function closeCapture() { overlay.classList.remove('open'); captureInput.value = ''; }
+    document.addEventListener('keydown', e => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); overlay.classList.contains('open') ? closeCapture() : openCapture(); }
+      if (e.key === 'Escape' && overlay.classList.contains('open')) closeCapture();
+    });
+    overlay.addEventListener('click', e => { if (e.target === overlay) closeCapture(); });
+    captureInput.addEventListener('keydown', async e => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        const text = captureInput.value.trim();
+        if (!text) return;
+        captureHint.textContent = 'Saving...';
+        try {
+          const data = await apiPost('/api/theo-os/capture', { text });
+          captureHint.textContent = (data && data.message) ? data.message : 'Captured.';
+          captureInput.value = '';
+          setTimeout(() => closeCapture(), 1500);
+        } catch { captureHint.textContent = 'Failed to save — check connection.'; }
+      }
+    });
+  })();
+
+</script>
+
+<!-- Cmd+K capture overlay -->
+<div class="capture-overlay" id="capture-overlay">
+  <div class="capture-box">
+    <textarea class="capture-input" id="capture-input"
+      placeholder="Capture anything — task, goal, idea, person, reminder, restaurant..." rows="2"></textarea>
+    <div class="capture-hint" id="capture-hint">↵ to capture · Esc to close</div>
+  </div>
+</div>
+</body>
+</html>

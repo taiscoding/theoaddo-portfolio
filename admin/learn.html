@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Learn — Theo OS</title>
+  <link rel="icon" href="/favicon.png">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/admin/css/admin.css">
+  <script>document.documentElement.setAttribute('data-theme', localStorage.getItem('theo_os_theme') || 'dark')</script>
+  <style>
+    /* ── Queue view ── */
+    .queue-header { display: flex; align-items: baseline; gap: 12px; margin-bottom: 24px; }
+    .queue-count  { font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); }
+    .queue-list   { display: flex; flex-direction: column; gap: 10px; }
+    .queue-item   { background: var(--void-elevated); border: 1px solid var(--border-ghost); border-radius: 10px; padding: 14px 16px; display: flex; align-items: center; gap: 16px; cursor: pointer; transition: border-color 0.15s; }
+    .queue-item:hover { border-color: var(--teal); }
+    .qi-title  { font-size: 13px; color: var(--text-primary); flex: 1; }
+    .qi-area   { font-family: var(--font-mono); font-size: 10px; color: var(--text-tertiary); }
+    .qi-depth  { font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.06em; padding: 2px 7px; border-radius: 3px; }
+    .qi-depth.aware    { background: rgba(255,255,255,0.05); color: var(--text-tertiary); }
+    .qi-depth.familiar { background: rgba(245,200,66,0.12); color: #f5c842; }
+    .qi-depth.fluent   { background: rgba(var(--teal-rgb,0,209,193),0.12); color: var(--teal); }
+    .qi-decay-wrap { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+    .qi-decay-bar  { width: 60px; height: 3px; background: var(--border-ghost); border-radius: 2px; }
+    .qi-decay-fill { height: 100%; border-radius: 2px; }
+    .qi-decay-val  { font-family: var(--font-mono); font-size: 10px; color: var(--text-tertiary); }
+    .qi-decay-overdue { font-family: var(--font-mono); font-size: 10px; color: var(--coral); }
+    .empty-queue { text-align: center; padding: 80px 20px; color: var(--text-tertiary); font-family: var(--font-mono); font-size: 12px; }
+    .empty-queue a { color: var(--teal); text-decoration: none; }
+
+    /* ── Review session ── */
+    #review-panel { display: none; }
+    .review-back  { background: none; border: none; color: var(--text-tertiary); font-family: var(--font-mono); font-size: 11px; cursor: pointer; margin-bottom: 20px; padding: 0; }
+    .review-back:hover { color: var(--teal); }
+    .review-topic { margin-bottom: 24px; }
+    .review-topic-title { font-size: 20px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; }
+    .review-meta { display: flex; gap: 12px; align-items: center; }
+    .section-label { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--teal); margin-bottom: 10px; }
+    .prompt-box { background: var(--void-elevated); border: 1px solid var(--border-subtle); border-radius: 10px; padding: 18px 20px; margin-bottom: 24px; }
+    .prompt-text { font-size: 15px; color: var(--text-primary); line-height: 1.6; }
+    .digest-box { background: var(--void-elevated); border: 1px solid var(--border-ghost); border-radius: 10px; padding: 18px 20px; margin-bottom: 24px; }
+    .digest-text { font-size: 13px; color: var(--text-secondary); line-height: 1.75; white-space: pre-wrap; }
+    .resources-box { margin-bottom: 24px; }
+    .resource-link { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border-ghost); text-decoration: none; }
+    .resource-link:last-child { border-bottom: none; }
+    .resource-link:hover .resource-title { color: var(--teal); }
+    .resource-title { font-size: 13px; color: var(--text-primary); flex: 1; transition: color 0.12s; }
+    .resource-domain { font-family: var(--font-mono); font-size: 10px; color: var(--text-tertiary); }
+    .response-section { margin-bottom: 24px; }
+    .response-textarea { width: 100%; background: var(--void-elevated); border: 1px solid var(--border-ghost); border-radius: 8px; padding: 14px 16px; font-size: 13px; font-family: var(--font-body); color: var(--text-primary); resize: vertical; min-height: 100px; box-sizing: border-box; }
+    .response-textarea:focus { outline: none; border-color: var(--teal); }
+    .submit-row { display: flex; gap: 12px; align-items: center; }
+    .submit-btn { background: none; border: 1px solid var(--teal); color: var(--teal); font-family: var(--font-mono); font-size: 11px; padding: 8px 20px; border-radius: 6px; cursor: pointer; }
+    .submit-btn:hover { background: var(--teal-subtle); }
+    .skip-btn { background: none; border: 1px solid var(--border-ghost); color: var(--text-tertiary); font-family: var(--font-mono); font-size: 11px; padding: 8px 16px; border-radius: 6px; cursor: pointer; }
+    .skip-btn:hover { border-color: var(--border-subtle); color: var(--text-secondary); }
+    .score-result { font-family: var(--font-mono); font-size: 11px; color: var(--text-secondary); padding: 10px 14px; background: var(--void-elevated); border-radius: 6px; border: 1px solid var(--border-ghost); display: none; }
+    .score-result.show { display: block; }
+    .score-result .score-num { color: var(--teal); font-weight: 600; }
+    .loading-msg { font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); padding: 40px 0; text-align: center; }
+  </style>
+</head>
+<body>
+<div class="shell">
+  <nav class="sidebar">
+    <div class="sidebar-logo">THEO OS</div>
+
+    <div class="sidebar-label">Overview</div>
+    <a href="/admin/dashboard.html" class="sidebar-link">Dashboard</a>
+    <a href="/admin/capture.html" class="sidebar-link">Quick Capture</a>
+
+    <div class="sidebar-label">Life</div>
+    <a href="/admin/tasks.html" class="sidebar-link">Tasks</a>
+    <a href="/admin/goals.html" class="sidebar-link">Goals</a>
+    <a href="/admin/people.html" class="sidebar-link">People</a>
+    <a href="/admin/collections.html" class="sidebar-link">Collections</a>
+
+    <div class="sidebar-label">Mind</div>
+    <a href="/admin/journal.html" class="sidebar-link">Journal</a>
+    <a href="/admin/vision.html" class="sidebar-link">Life Vision</a>
+    <a href="/admin/review.html" class="sidebar-link">Weekly Review</a>
+
+    <div class="sidebar-label">Inbox</div>
+    <a href="/admin/email.html" class="sidebar-link">Email Triage</a>
+
+    <div class="sidebar-label">Intelligence</div>
+    <a href="/admin/chat.html" class="sidebar-link">Chat</a>
+    <a href="/admin/model.html" class="sidebar-link">The Theo Model</a>
+    <a href="/admin/knowledge.html" class="sidebar-link">Knowledge</a>
+    <a href="/admin/learn.html" class="sidebar-link active">Learn</a>
+    <a href="/admin/graph.html" class="sidebar-link">Knowledge Graph</a>
+
+    <div class="sidebar-label" style="margin-top:24px">Account</div>
+    <button class="theme-toggle" id="theme-toggle"></button>
+    <a href="#" class="sidebar-link" id="logout-btn">Sign out</a>
+  </nav>
+
+  <main class="main">
+
+    <!-- Queue view -->
+    <div id="queue-panel">
+      <div class="topbar">
+        <div>
+          <h1 class="page-title">Learn</h1>
+          <p style="font-size:13px; color:var(--text-tertiary); margin-top:4px; font-family:var(--font-mono);">Review sessions for knowledge that has faded or is due.</p>
+        </div>
+      </div>
+      <div id="queue-content"><div class="loading-msg">Loading due notes...</div></div>
+    </div>
+
+    <!-- Review session -->
+    <div id="review-panel">
+      <button class="review-back" id="back-btn">← Back to queue</button>
+
+      <div class="review-topic">
+        <div class="review-topic-title" id="review-title"></div>
+        <div class="review-meta">
+          <span class="qi-depth" id="review-depth-badge"></span>
+          <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-tertiary);" id="review-decay-label"></span>
+        </div>
+      </div>
+
+      <div id="review-body"><div class="loading-msg">Generating review session...</div></div>
+    </div>
+
+  </main>
+</div>
+
+<script src="/admin/js/auth.js"></script>
+<script>
+  requireAuth();
+
+  document.getElementById('logout-btn').addEventListener('click', e => {
+    e.preventDefault(); clearToken(); window.location.href = '/admin/index.html';
+  });
+
+  const today = new Date().toISOString().split('T')[0];
+  let currentNoteId = null;
+
+  function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  function renderMd(s) {
+    // Escape HTML first, then apply markdown patterns
+    let html = esc(s);
+    // Headers: # H1, ## H2, ### H3
+    html = html.replace(/^### (.+)$/gm, '<h4 style="font-size:13px;font-weight:600;color:var(--text-primary);margin:16px 0 6px">$1</h4>');
+    html = html.replace(/^## (.+)$/gm, '<h3 style="font-size:14px;font-weight:600;color:var(--text-primary);margin:18px 0 8px">$1</h3>');
+    html = html.replace(/^# (.+)$/gm, '<h2 style="font-size:15px;font-weight:600;color:var(--text-primary);margin:0 0 12px">$1</h2>');
+    // Bold
+    html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    // Italic
+    html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+    // Horizontal rule
+    html = html.replace(/^---$/gm, '<hr style="border:none;border-top:1px solid var(--border-ghost);margin:14px 0">');
+    // Paragraph breaks (double newline)
+    html = html.replace(/\n\n/g, '</p><p style="margin:0 0 10px">');
+    // Single newlines
+    html = html.replace(/\n/g, '<br>');
+    return '<p style="margin:0 0 10px">' + html + '</p>';
+  }
+
+  function decayClass(d) {
+    if (d >= 0.65) return 'decay-high';
+    if (d >= 0.35) return 'decay-mid';
+    return 'decay-low';
+  }
+
+  function daysOverdue(dateStr) {
+    if (!dateStr) return null;
+    return Math.ceil((new Date(today) - new Date(dateStr)) / 86400000);
+  }
+
+  function domainOf(url) {
+    try { return new URL(url).hostname.replace('www.',''); } catch { return url; }
+  }
+
+  // ── Queue ──
+
+  async function loadQueue() {
+    const data = await apiGet('/api/theo-os/knowledge?max_decay=0.99');
+    const notes = (data?.notes || []);
+    const due = notes.filter(n => (n.next_review && n.next_review <= today) || (n.decay_score ?? 1) < 0.5);
+    due.sort((a, b) => (a.decay_score ?? 1) - (b.decay_score ?? 1));
+
+    const queueContent = document.getElementById('queue-content');
+
+    if (due.length === 0) {
+      queueContent.innerHTML = `
+        <div class="empty-queue">
+          <div style="font-size:24px;margin-bottom:12px">✓</div>
+          Nothing due for review right now.<br>
+          <a href="/admin/knowledge.html">View all knowledge notes</a>
+        </div>
+      `;
+      return;
+    }
+
+    queueContent.innerHTML = `
+      <div class="queue-header">
+        <span style="font-size:16px;font-weight:600;color:var(--text-primary)">${due.length} note${due.length !== 1 ? 's' : ''} due</span>
+        <span class="queue-count">sorted by decay</span>
+      </div>
+      <div class="queue-list">
+        ${due.map(n => {
+          const decay = n.decay_score ?? 1;
+          const overdueDays = daysOverdue(n.next_review);
+          return `
+            <div class="queue-item" data-id="${n.id}" data-title="${esc(n.title)}" data-depth="${esc(n.depth)}" data-decay="${decay.toFixed(2)}">
+              <div style="flex:1">
+                <div class="qi-title">${esc(n.title)}</div>
+                ${n.area ? `<div class="qi-area" style="margin-top:3px">${esc(n.area)}</div>` : ''}
+              </div>
+              <span class="qi-depth ${esc(n.depth)}">${esc(n.depth)}</span>
+              <div class="qi-decay-wrap">
+                <div class="qi-decay-bar"><div class="qi-decay-fill ${decayClass(decay)}" style="width:${Math.round(decay*100)}%"></div></div>
+                <span class="qi-decay-val">${(decay*100).toFixed(0)}%</span>
+                ${overdueDays > 0 ? `<span class="qi-decay-overdue">${overdueDays}d overdue</span>` : ''}
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+
+    document.querySelectorAll('.queue-item').forEach(item => {
+      item.addEventListener('click', () => startReview(
+        Number(item.dataset.id),
+        item.dataset.title,
+        item.dataset.depth,
+        parseFloat(item.dataset.decay)
+      ));
+    });
+
+  }
+
+  // ── Review session ──
+
+  async function startReview(id, title, depth, decay) {
+    currentNoteId = id;
+    document.getElementById('queue-panel').style.display = 'none';
+    document.getElementById('review-panel').style.display = 'block';
+
+    document.getElementById('review-title').textContent = title;
+    const depthBadge = document.getElementById('review-depth-badge');
+    depthBadge.textContent = depth;
+    depthBadge.className = `qi-depth ${depth}`;
+    document.getElementById('review-decay-label').textContent = `${(decay*100).toFixed(0)}% retained`;
+
+    const body = document.getElementById('review-body');
+    body.innerHTML = '<div class="loading-msg">Generating your review session...</div>';
+
+    let session;
+    try {
+      session = await apiPost(`/api/theo-os/knowledge/${id}/review`, {});
+    } catch (e) {
+      body.innerHTML = `<div class="loading-msg" style="color:var(--coral)">Failed to load session. <button onclick="showQueue()" style="background:none;border:none;color:var(--teal);cursor:pointer;font-family:var(--font-mono)">Go back</button></div>`;
+      return;
+    }
+
+    const { prompt, digest, resources } = session || {};
+
+    const resourcesHtml = (resources || []).length > 0 ? `
+      <div class="resources-box">
+        <div class="section-label">Sources</div>
+        ${resources.map(r => `
+          <a class="resource-link" href="${esc(r.url)}" target="_blank" rel="noopener noreferrer">
+            <div style="flex:1">
+              <div class="resource-title">${esc(r.title || r.url)}</div>
+              <div class="resource-domain">${esc(domainOf(r.url))}</div>
+            </div>
+            <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-tertiary)">↗</span>
+          </a>
+        `).join('')}
+      </div>
+    ` : '';
+
+    const digestHtml = digest ? `
+      <div class="digest-box">
+        <div class="section-label">Digest</div>
+        <div class="digest-text" style="white-space:normal">${renderMd(digest)}</div>
+      </div>
+    ` : '';
+
+    body.innerHTML = `
+      <div class="prompt-box">
+        <div class="section-label">Reflect</div>
+        <div class="prompt-text">${renderMd(prompt || '')}</div>
+      </div>
+
+      ${digestHtml}
+      ${resourcesHtml}
+
+      <div class="response-section">
+        <div class="section-label">Your response</div>
+        <textarea class="response-textarea" id="response-input" placeholder="Write your answer here..."></textarea>
+      </div>
+
+      <div class="submit-row">
+        <button class="submit-btn" id="submit-btn">Submit response</button>
+        <button class="skip-btn" id="skip-btn">Skip for now</button>
+        <div class="score-result" id="score-result"></div>
+      </div>
+    `;
+
+    document.getElementById('submit-btn').addEventListener('click', submitResponse);
+    document.getElementById('skip-btn').addEventListener('click', () => {
+      showQueue();
+      loadQueue();
+    });
+  }
+
+  async function submitResponse() {
+    const response = document.getElementById('response-input')?.value?.trim();
+    if (!response) return;
+
+    const submitBtn = document.getElementById('submit-btn');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Scoring...';
+
+    let result;
+    try {
+      result = await apiPost(`/api/theo-os/knowledge/${currentNoteId}/score`, { response });
+    } catch (e) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Submit response';
+      return;
+    }
+
+    const scoreEl = document.getElementById('score-result');
+    const { score, new_depth, new_interval } = result || {};
+    const depthChanged = new_depth && new_depth !== document.getElementById('review-depth-badge').textContent;
+    scoreEl.innerHTML = `Score: <span class="score-num">${score}/5</span> · Next review in ${new_interval || '?'} day${new_interval !== 1 ? 's' : ''}${depthChanged ? ` · Depth → ${new_depth}` : ''}`;
+    scoreEl.classList.add('show');
+
+    submitBtn.textContent = 'Done';
+    submitBtn.style.borderColor = 'var(--teal)';
+
+    // Auto-return to queue after 2.5s
+    setTimeout(() => {
+      showQueue();
+      loadQueue();
+    }, 2500);
+  }
+
+  function showQueue() {
+    currentNoteId = null;
+    document.getElementById('review-panel').style.display = 'none';
+    document.getElementById('queue-panel').style.display = 'block';
+    window.history.replaceState({}, '', '/admin/learn.html');
+  }
+
+  document.getElementById('back-btn').addEventListener('click', () => {
+    showQueue();
+    loadQueue();
+  });
+
+  const directId = new URLSearchParams(window.location.search).get('id');
+  if (directId) {
+    // Came from graph/model — skip queue, go straight to review
+    apiGet(`/api/theo-os/knowledge/${directId}`)
+      .then(data => {
+        const n = data?.note;
+        if (n) startReview(n.id, n.title, n.depth, n.decay_score ?? 1);
+        else loadQueue();
+      })
+      .catch(() => loadQueue());
+  } else {
+    loadQueue();
+  }
+</script>
+</body>
+</html>

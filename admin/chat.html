@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chat — Theo OS</title>
+  <link rel="icon" href="/favicon.png">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/admin/css/admin.css">
+  <script>document.documentElement.setAttribute('data-theme', localStorage.getItem('theo_os_theme') || 'dark')</script>
+  <style>
+    /* Override main layout so chat fills height */
+    .main {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .topbar {
+      flex-shrink: 0;
+    }
+
+    /* Chat container */
+    .chat-container {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
+    }
+
+    /* Messages area */
+    .messages-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 0 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .messages-area::-webkit-scrollbar {
+      width: 4px;
+    }
+    .messages-area::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .messages-area::-webkit-scrollbar-thumb {
+      background: var(--border-subtle);
+      border-radius: 2px;
+    }
+
+    /* Message bubbles */
+    .message {
+      display: flex;
+      flex-direction: column;
+      max-width: 85%;
+    }
+
+    .message.user {
+      align-self: flex-end;
+      align-items: flex-end;
+      max-width: 70%;
+    }
+
+    .message.assistant {
+      align-self: flex-start;
+      align-items: flex-start;
+    }
+
+    .message-bubble {
+      padding: 12px 16px;
+      border-radius: 18px 18px 4px 18px;
+      font-size: 14px;
+      line-height: 1.65;
+      word-break: break-word;
+    }
+
+    .message.user .message-bubble {
+      background: var(--teal);
+      color: #000;
+      font-family: var(--font-body);
+    }
+
+    .message.assistant .message-bubble {
+      background: var(--void-elevated);
+      border: 1px solid var(--border-ghost);
+      border-radius: 4px 18px 18px 18px;
+      color: var(--text-primary);
+      font-family: var(--font-body);
+    }
+
+    /* Markdown rendering inside assistant bubble */
+    .message.assistant .message-bubble strong { font-weight: 600; }
+    .message.assistant .message-bubble em { font-style: italic; color: var(--text-secondary); }
+    .message.assistant .message-bubble code {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      background: var(--void-surface);
+      border: 1px solid var(--border-ghost);
+      border-radius: 3px;
+      padding: 1px 5px;
+      color: var(--teal);
+    }
+    .message.assistant .message-bubble ul,
+    .message.assistant .message-bubble ol {
+      margin: 6px 0 6px 18px;
+      padding: 0;
+    }
+    .message.assistant .message-bubble li {
+      margin-bottom: 3px;
+    }
+
+    /* Tool chip */
+    .tool-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      margin-top: 6px;
+      padding: 3px 10px;
+      border: 1px solid var(--teal);
+      border-radius: 20px;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.05em;
+      color: var(--teal);
+      opacity: 0.7;
+    }
+
+    /* Thinking indicator */
+    .thinking-indicator {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 14px 16px;
+      background: var(--void-elevated);
+      border: 1px solid var(--border-ghost);
+      border-radius: 4px 18px 18px 18px;
+      align-self: flex-start;
+    }
+
+    .thinking-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--text-tertiary);
+      animation: pulse-dot 1.4s infinite ease-in-out;
+    }
+    .thinking-dot:nth-child(2) { animation-delay: 0.2s; }
+    .thinking-dot:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes pulse-dot {
+      0%, 80%, 100% { opacity: 0.3; transform: scale(0.85); }
+      40% { opacity: 1; transform: scale(1); }
+    }
+
+    /* Welcome message */
+    .welcome-message {
+      align-self: flex-start;
+    }
+
+    /* Input row */
+    .input-row {
+      flex-shrink: 0;
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+      padding: 12px 0 16px;
+      border-top: 1px solid var(--border-ghost);
+    }
+
+    .chat-input {
+      flex: 1;
+      background: var(--void-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      padding: 11px 14px;
+      font-size: 14px;
+      font-family: var(--font-body);
+      color: var(--text-primary);
+      outline: none;
+      resize: none;
+      min-height: 44px;
+      max-height: 160px;
+      line-height: 1.5;
+      transition: border-color 0.2s;
+      overflow-y: auto;
+    }
+    .chat-input:focus { border-color: var(--teal); }
+    .chat-input::placeholder { color: var(--text-tertiary); }
+
+    .send-btn {
+      flex-shrink: 0;
+      background: var(--teal);
+      color: #000;
+      border: none;
+      border-radius: 10px;
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: opacity 0.2s;
+      font-size: 18px;
+    }
+    .send-btn:hover { opacity: 0.85; }
+    .send-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+  </style>
+</head>
+<body>
+<div class="shell">
+  <nav class="sidebar">
+    <div class="sidebar-logo">THEO OS</div>
+
+    <div class="sidebar-label">Overview</div>
+    <a href="/admin/dashboard.html" class="sidebar-link">Dashboard</a>
+    <a href="/admin/capture.html" class="sidebar-link">Quick Capture</a>
+
+    <div class="sidebar-label">Life</div>
+    <a href="/admin/tasks.html" class="sidebar-link">Tasks</a>
+    <a href="/admin/goals.html" class="sidebar-link">Goals</a>
+    <a href="/admin/people.html" class="sidebar-link">People</a>
+    <a href="/admin/collections.html" class="sidebar-link">Collections</a>
+
+    <div class="sidebar-label">Mind</div>
+    <a href="/admin/journal.html" class="sidebar-link">Journal</a>
+    <a href="/admin/vision.html" class="sidebar-link">Life Vision</a>
+    <a href="/admin/review.html" class="sidebar-link">Weekly Review</a>
+
+    <div class="sidebar-label">Inbox</div>
+    <a href="/admin/email.html" class="sidebar-link">Email Triage</a>
+
+    <div class="sidebar-label">Intelligence</div>
+    <a href="/admin/chat.html" class="sidebar-link active">Chat</a>
+    <a href="/admin/model.html" class="sidebar-link">The Theo Model</a>
+    <a href="/admin/knowledge.html" class="sidebar-link">Knowledge</a>
+    <a href="/admin/learn.html" class="sidebar-link">Learn</a>
+    <a href="/admin/graph.html" class="sidebar-link">Knowledge Graph</a>
+
+    <div class="sidebar-label" style="margin-top:24px">Account</div>
+    <button class="theme-toggle" id="theme-toggle"></button>
+    <a href="#" class="sidebar-link" id="logout-btn">Sign out</a>
+  </nav>
+
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <h1 class="page-title">Chat</h1>
+        <p style="font-size:13px; color:var(--text-tertiary); margin-top:4px; font-family:var(--font-mono);">Your secretary and thinking partner.</p>
+      </div>
+    </div>
+
+    <div class="chat-container">
+      <div class="messages-area" id="messages-area">
+        <!-- Messages populated by JS -->
+      </div>
+
+      <div class="input-row">
+        <textarea
+          class="chat-input"
+          id="chat-input"
+          placeholder="What's on your mind?"
+          rows="1"
+          autocomplete="off"
+        ></textarea>
+        <button class="send-btn" id="send-btn" aria-label="Send message">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="22" y1="2" x2="11" y2="13"></line>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="/admin/js/auth.js"></script>
+<script>
+  requireAuth();
+
+  document.getElementById('logout-btn').addEventListener('click', e => {
+    e.preventDefault();
+    clearToken();
+    window.location.href = '/admin/index.html';
+  });
+
+  // ---- Session state ----
+  const SESSION_ID = generateUUID();
+  let history = []; // { role, content }
+  let isThinking = false;
+
+  function generateUUID() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+      const r = Math.random() * 16 | 0;
+      return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+    });
+  }
+
+  // ---- Greeting ----
+  function getGreeting() {
+    const h = new Date().getHours();
+    if (h < 12) return 'Good morning.';
+    if (h < 17) return 'Good afternoon.';
+    return 'Good evening.';
+  }
+
+  // ---- Simple markdown renderer ----
+  function renderMarkdown(text) {
+    // Escape HTML first
+    let html = text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+
+    // Code blocks (backtick triple) — handle before inline
+    html = html.replace(/```[\s\S]*?```/g, match => {
+      const code = match.slice(3, -3).replace(/^\n/, '');
+      return `<pre style="background:var(--void-surface);border:1px solid var(--border-ghost);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:8px 0;"><code style="font-family:var(--font-mono);font-size:12px;color:var(--teal);">${code}</code></pre>`;
+    });
+
+    // Bold
+    html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    // Italic (not inside words)
+    html = html.replace(/(?<!\w)\*(.+?)\*(?!\w)/g, '<em>$1</em>');
+    // Inline code
+    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+    // Unordered lists: lines starting with - or *
+    html = html.replace(/((?:^[ \t]*[-*] .+\n?)+)/gm, match => {
+      const items = match.trim().split('\n').map(line => {
+        const content = line.replace(/^[ \t]*[-*] /, '');
+        return `<li>${content}</li>`;
+      }).join('');
+      return `<ul>${items}</ul>`;
+    });
+
+    // Ordered lists
+    html = html.replace(/((?:^[ \t]*\d+\. .+\n?)+)/gm, match => {
+      const items = match.trim().split('\n').map(line => {
+        const content = line.replace(/^[ \t]*\d+\. /, '');
+        return `<li>${content}</li>`;
+      }).join('');
+      return `<ol>${items}</ol>`;
+    });
+
+    // Newlines to <br> (but not inside block elements)
+    html = html.replace(/\n/g, '<br>');
+
+    return html;
+  }
+
+  // ---- DOM helpers ----
+
+  function scrollToBottom(smooth) {
+    const area = document.getElementById('messages-area');
+    area.scrollTo({ top: area.scrollHeight, behavior: smooth ? 'smooth' : 'instant' });
+  }
+
+  function appendMessage(role, content, toolCallsMade) {
+    const area = document.getElementById('messages-area');
+
+    // Remove thinking indicator if present
+    const thinking = area.querySelector('.thinking-indicator');
+    if (thinking) thinking.remove();
+
+    const wrapper = document.createElement('div');
+    wrapper.className = `message ${role}`;
+
+    const bubble = document.createElement('div');
+    bubble.className = 'message-bubble';
+
+    if (role === 'user') {
+      bubble.textContent = content;
+    } else {
+      bubble.innerHTML = renderMarkdown(content);
+    }
+
+    wrapper.appendChild(bubble);
+
+    if (role === 'assistant' && toolCallsMade > 0) {
+      const chip = document.createElement('div');
+      chip.className = 'tool-chip';
+      chip.textContent = `Used ${toolCallsMade} tool${toolCallsMade > 1 ? 's' : ''}`;
+      wrapper.appendChild(chip);
+    }
+
+    area.appendChild(wrapper);
+    scrollToBottom(true);
+  }
+
+  function showThinking() {
+    const area = document.getElementById('messages-area');
+    const existing = area.querySelector('.thinking-indicator');
+    if (existing) return;
+
+    const indicator = document.createElement('div');
+    indicator.className = 'thinking-indicator';
+    indicator.innerHTML = `
+      <div class="thinking-dot"></div>
+      <div class="thinking-dot"></div>
+      <div class="thinking-dot"></div>
+    `;
+    area.appendChild(indicator);
+    scrollToBottom(true);
+  }
+
+  function hideThinking() {
+    const area = document.getElementById('messages-area');
+    const existing = area.querySelector('.thinking-indicator');
+    if (existing) existing.remove();
+  }
+
+  // ---- Send message ----
+
+  async function sendMessage() {
+    if (isThinking) return;
+
+    const input = document.getElementById('chat-input');
+    const message = input.value.trim();
+    if (!message) return;
+
+    // Clear input
+    input.value = '';
+    input.style.height = '';
+
+    // Append user message to UI
+    appendMessage('user', message, 0);
+
+    // Add to history
+    history.push({ role: 'user', content: message });
+
+    // Show thinking
+    isThinking = true;
+    document.getElementById('send-btn').disabled = true;
+    showThinking();
+
+    try {
+      const data = await apiPost('/api/theo-os/chat/message', {
+        message,
+        session_id: SESSION_ID,
+        history: history.slice(-20).slice(0, -1) // send all except the just-added user message
+      });
+
+      hideThinking();
+
+      if (!data || !data.message) {
+        appendMessage('assistant', 'Something went wrong. Try again.', 0);
+        return;
+      }
+
+      appendMessage('assistant', data.message, data.tool_calls_made || 0);
+
+      // Add assistant response to history
+      history.push({ role: 'assistant', content: data.message });
+
+      // Keep history bounded
+      if (history.length > 40) history = history.slice(-40);
+
+    } catch (e) {
+      hideThinking();
+      appendMessage('assistant', 'Network error. Check your connection.', 0);
+    } finally {
+      isThinking = false;
+      document.getElementById('send-btn').disabled = false;
+      input.focus();
+    }
+  }
+
+  // ---- Input auto-expand ----
+
+  function autoExpand(el) {
+    el.style.height = 'auto';
+    const newHeight = Math.min(el.scrollHeight, 160);
+    el.style.height = newHeight + 'px';
+  }
+
+  const chatInput = document.getElementById('chat-input');
+
+  chatInput.addEventListener('input', () => autoExpand(chatInput));
+
+  chatInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+
+  document.getElementById('send-btn').addEventListener('click', sendMessage);
+
+  // ---- Cmd+K: focus input on chat page ----
+  document.addEventListener('keydown', e => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      e.preventDefault();
+      chatInput.focus();
+    }
+  });
+
+  // ---- Init: show welcome message ----
+  function init() {
+    const welcomeText = `${getGreeting()} What's on your mind?`;
+    appendMessage('assistant', welcomeText, 0);
+    chatInput.focus();
+  }
+
+  init();
+
+  // Cmd+K capture overlay
+  (function() {
+    const overlay = document.getElementById('capture-overlay');
+    const captureInput = document.getElementById('capture-input');
+    const captureHint = document.getElementById('capture-hint');
+    function openCapture() {
+      overlay.classList.add('open');
+      captureInput.value = '';
+      captureHint.textContent = '↵ to capture · Esc to close';
+      captureInput.focus();
+    }
+    function closeCapture() { overlay.classList.remove('open'); captureInput.value = ''; }
+    document.addEventListener('keydown', e => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); overlay.classList.contains('open') ? closeCapture() : openCapture(); }
+      if (e.key === 'Escape' && overlay.classList.contains('open')) closeCapture();
+    });
+    overlay.addEventListener('click', e => { if (e.target === overlay) closeCapture(); });
+    captureInput.addEventListener('keydown', async e => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        const text = captureInput.value.trim();
+        if (!text) return;
+        captureHint.textContent = 'Saving...';
+        try {
+          const data = await apiPost('/api/theo-os/capture', { text });
+          captureHint.textContent = (data && data.message) ? data.message : 'Captured.';
+          captureInput.value = '';
+          setTimeout(() => closeCapture(), 1500);
+        } catch { captureHint.textContent = 'Failed to save — check connection.'; }
+      }
+    });
+  })();
+
+</script>
+
+<!-- Cmd+K capture overlay -->
+<div class="capture-overlay" id="capture-overlay">
+  <div class="capture-box">
+    <textarea class="capture-input" id="capture-input"
+      placeholder="Capture anything — task, goal, idea, person, reminder, restaurant..." rows="2"></textarea>
+    <div class="capture-hint" id="capture-hint">↵ to capture · Esc to close</div>
+  </div>
+</div>
+</body>
+</html>

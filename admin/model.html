@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Theo Model — Theo OS</title>
+  <link rel="icon" href="/favicon.png">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/admin/css/admin.css">
+  <script>document.documentElement.setAttribute('data-theme', localStorage.getItem('theo_os_theme') || 'dark')</script>
+  <style>
+    .model-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+    .model-col { }
+    .model-col-title { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; }
+    .memory-card { background: var(--void-elevated); border: 1px solid var(--border-ghost); border-radius: 8px; padding: 14px 16px; margin-bottom: 10px; }
+    .memory-content { font-size: 13px; color: var(--text-primary); margin-bottom: 10px; line-height: 1.5; }
+    .memory-content[contenteditable="true"] { outline: 1px solid var(--teal); border-radius: 3px; padding: 2px 4px; }
+    .memory-meta { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .conf-bar { flex: 1; height: 3px; background: var(--border-ghost); border-radius: 2px; }
+    .conf-fill { height: 100%; border-radius: 2px; background: var(--teal); transition: width 0.3s; }
+    .conf-fill.low { background: var(--coral); }
+    .conf-fill.mid { background: #f5c842; }
+    .source-badge { font-family: var(--font-mono); font-size: 9px; color: var(--text-tertiary); letter-spacing: 0.05em; }
+    .memory-date { font-family: var(--font-mono); font-size: 10px; color: var(--text-tertiary); }
+    .memory-actions { display: flex; gap: 8px; }
+    .mem-btn { background: none; border: 1px solid var(--border-ghost); border-radius: 4px; font-size: 10px; font-family: var(--font-mono); color: var(--text-secondary); cursor: pointer; padding: 3px 8px; transition: all 0.15s; }
+    .mem-btn:hover { border-color: var(--teal); color: var(--teal); }
+    .mem-btn.danger:hover { border-color: var(--coral); color: var(--coral); }
+    .add-memory-form { margin-bottom: 16px; display: flex; flex-direction: column; gap: 8px; }
+    .add-memory-input { background: var(--void-elevated); border: 1px solid var(--border-ghost); border-radius: 6px; padding: 8px 10px; font-size: 12px; font-family: var(--font-body); color: var(--text-primary); resize: none; }
+    .add-memory-input:focus { outline: none; border-color: var(--teal); }
+    .add-memory-btn { align-self: flex-end; background: none; border: 1px solid var(--border-subtle); border-radius: 6px; padding: 5px 12px; font-size: 11px; font-family: var(--font-mono); color: var(--teal); cursor: pointer; }
+    .add-memory-btn:hover { background: var(--teal-subtle); }
+    @media (max-width: 900px) { .model-grid { grid-template-columns: 1fr; } }
+
+    /* Knowledge Map */
+    .section-title { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-tertiary); margin: 32px 0 16px; }
+    .knowledge-areas { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+    .area-card { background: var(--void-elevated); border: 1px solid var(--border-ghost); border-radius: 8px; padding: 14px 16px; }
+    .area-name { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-tertiary); margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; }
+    .area-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .kn-note { display: flex; align-items: center; gap: 8px; padding: 5px 0; border-bottom: 1px solid var(--border-ghost); cursor: pointer; }
+    .kn-note:last-child { border-bottom: none; }
+    .kn-note:hover .kn-title { color: var(--teal); }
+    .depth-badge { font-family: var(--font-mono); font-size: 8px; letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 6px; border-radius: 10px; flex-shrink: 0; }
+    .depth-aware { background: rgba(160,174,192,0.12); color: var(--text-tertiary); }
+    .depth-familiar { background: rgba(245,200,66,0.12); color: #f5c842; }
+    .depth-fluent { background: rgba(0,209,193,0.12); color: var(--teal); }
+    .kn-title { font-size: 12px; color: var(--text-secondary); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .kn-decay { width: 32px; height: 2px; background: var(--border-ghost); border-radius: 2px; flex-shrink: 0; }
+    .kn-decay-fill { height: 100%; border-radius: 2px; background: var(--teal); }
+    .kn-decay-fill.low { background: var(--coral); }
+    .kn-decay-fill.mid { background: #f5c842; }
+    .kn-due { font-family: var(--font-mono); font-size: 8px; color: var(--coral); margin-left: 2px; }
+    .km-empty { font-size: 12px; color: var(--text-tertiary); font-family: var(--font-mono); }
+
+    /* Chat Memory Log */
+    .chat-memory-list { display: flex; flex-direction: column; gap: 8px; max-width: 760px; }
+    .cm-entry { background: var(--void-elevated); border: 1px solid var(--border-ghost); border-radius: 8px; padding: 12px 16px; display: flex; align-items: flex-start; gap: 14px; }
+    .cm-meta { flex-shrink: 0; width: 80px; }
+    .cm-date { font-family: var(--font-mono); font-size: 10px; color: var(--text-tertiary); }
+    .cm-session { font-family: var(--font-mono); font-size: 9px; color: var(--text-tertiary); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 80px; }
+    .cm-summary { font-size: 13px; color: var(--text-secondary); line-height: 1.55; flex: 1; }
+    .cm-delete { background: none; border: none; font-family: var(--font-mono); font-size: 10px; color: var(--text-tertiary); cursor: pointer; padding: 0; flex-shrink: 0; align-self: flex-start; margin-top: 2px; }
+    .cm-delete:hover { color: var(--coral); }
+    .cm-empty { font-family: var(--font-mono); font-size: 12px; color: var(--text-tertiary); }
+
+    /* Activity Chart */
+    .activity-bars { display: flex; flex-direction: column; gap: 10px; max-width: 560px; }
+    .act-row { display: flex; align-items: center; gap: 12px; }
+    .act-label { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-secondary); width: 90px; flex-shrink: 0; text-align: right; }
+    .act-track { flex: 1; height: 8px; background: var(--border-ghost); border-radius: 4px; overflow: hidden; }
+    .act-fill { height: 100%; border-radius: 4px; transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
+    .act-count { font-family: var(--font-mono); font-size: 10px; color: var(--text-tertiary); width: 28px; flex-shrink: 0; }
+    .act-empty { font-size: 12px; color: var(--text-tertiary); font-family: var(--font-mono); }
+  </style>
+</head>
+<body>
+<div class="shell">
+  <nav class="sidebar">
+    <div class="sidebar-logo">THEO OS</div>
+
+    <div class="sidebar-label">Overview</div>
+    <a href="/admin/dashboard.html" class="sidebar-link">Dashboard</a>
+    <a href="/admin/capture.html" class="sidebar-link">Quick Capture</a>
+
+    <div class="sidebar-label">Life</div>
+    <a href="/admin/tasks.html" class="sidebar-link">Tasks</a>
+    <a href="/admin/goals.html" class="sidebar-link">Goals</a>
+    <a href="/admin/people.html" class="sidebar-link">People</a>
+    <a href="/admin/collections.html" class="sidebar-link">Collections</a>
+
+    <div class="sidebar-label">Mind</div>
+    <a href="/admin/journal.html" class="sidebar-link">Journal</a>
+    <a href="/admin/vision.html" class="sidebar-link">Life Vision</a>
+    <a href="/admin/review.html" class="sidebar-link">Weekly Review</a>
+
+    <div class="sidebar-label">Inbox</div>
+    <a href="/admin/email.html" class="sidebar-link">Email Triage</a>
+
+    <div class="sidebar-label">Intelligence</div>
+    <a href="/admin/chat.html" class="sidebar-link">Chat</a>
+    <a href="/admin/model.html" class="sidebar-link active">The Theo Model</a>
+    <a href="/admin/knowledge.html" class="sidebar-link">Knowledge</a>
+    <a href="/admin/learn.html" class="sidebar-link">Learn</a>
+    <a href="/admin/graph.html" class="sidebar-link">Knowledge Graph</a>
+
+    <div class="sidebar-label" style="margin-top:24px">Account</div>
+    <button class="theme-toggle" id="theme-toggle"></button>
+    <a href="#" class="sidebar-link" id="logout-btn">Sign out</a>
+  </nav>
+
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <h1 class="page-title">The Theo Model</h1>
+        <p style="font-size:13px; color:var(--text-tertiary); margin-top:4px; font-family:var(--font-mono);">What the system has learned. Edit, correct, or delete anything.</p>
+      </div>
+    </div>
+
+    <div class="model-grid" id="model-grid">
+      <div class="model-col" id="col-fact"></div>
+      <div class="model-col" id="col-pattern"></div>
+      <div class="model-col" id="col-preference"></div>
+    </div>
+
+    <p class="section-title">Chat Memory Log <span style="font-size:9px;color:var(--text-tertiary);font-weight:400;text-transform:none;letter-spacing:0">— what the system has learned</span></p>
+    <div class="chat-memory-list" id="chat-memory-list"><span class="cm-empty">Loading...</span></div>
+
+    <p class="section-title">Knowledge Map</p>
+    <div class="knowledge-areas" id="knowledge-areas"><span class="km-empty">Loading...</span></div>
+
+    <p class="section-title">Life Area Activity <span style="font-size:9px;color:var(--text-tertiary);font-weight:400;text-transform:none;letter-spacing:0">— last 90 days</span></p>
+    <div class="activity-bars" id="activity-bars"><span class="act-empty">Loading...</span></div>
+  </main>
+</div>
+
+<script src="/admin/js/auth.js"></script>
+<script>
+  requireAuth();
+
+  document.getElementById('logout-btn').addEventListener('click', e => {
+    e.preventDefault();
+    clearToken();
+    window.location.href = '/admin/index.html';
+  });
+
+  function esc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function confColor(c) {
+    if (c >= 0.7) return '';
+    if (c >= 0.4) return 'mid';
+    return 'low';
+  }
+
+  function fmtDate(ts) {
+    if (!ts) return '';
+    return new Date(ts.replace(' ','T')+'Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+
+  function renderCol(type, label, memories) {
+    const col = document.getElementById(`col-${type}`);
+    const cards = memories.map(m => `
+      <div class="memory-card" data-id="${m.id}">
+        <div class="memory-content" data-field="content">${esc(m.content)}</div>
+        <div class="memory-meta">
+          <div class="conf-bar"><div class="conf-fill ${confColor(m.confidence)}" style="width:${Math.round(m.confidence*100)}%"></div></div>
+          <span class="source-badge">${esc(m.source || 'chat')}</span>
+          <span class="memory-date">${fmtDate(m.last_reinforced)}</span>
+        </div>
+        <div class="memory-actions">
+          <button class="mem-btn" data-action="edit">Edit</button>
+          <button class="mem-btn" data-action="boost">Boost</button>
+          <button class="mem-btn" data-action="suppress">Suppress</button>
+          <button class="mem-btn danger" data-action="delete">Delete</button>
+        </div>
+      </div>
+    `).join('');
+
+    col.innerHTML = `
+      <div class="model-col-title">${label} <span>${memories.length}</span></div>
+      <div class="add-memory-form">
+        <textarea class="add-memory-input" id="add-${type}" rows="2" placeholder="Add a ${label.toLowerCase()}..."></textarea>
+        <button class="add-memory-btn" data-type="${type}">+ Add</button>
+      </div>
+      ${cards}
+    `;
+  }
+
+  function attachHandlers() {
+    document.querySelectorAll('.add-memory-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const type = btn.dataset.type;
+        const ta = document.getElementById(`add-${type}`);
+        const content = ta.value.trim();
+        if (!content) return;
+        await apiPost('/api/theo-os/memories', { type, content });
+        ta.value = '';
+        load();
+      });
+    });
+
+    document.querySelectorAll('.memory-card').forEach(card => {
+      const id = Number(card.dataset.id);
+      card.querySelectorAll('.mem-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const action = btn.dataset.action;
+          if (action === 'delete') {
+            if (!confirm('Delete this memory?')) return;
+            await apiFetch(`/api/theo-os/memories/${id}`, { method: 'DELETE' });
+            load();
+          } else if (action === 'boost') {
+            const confFill = card.querySelector('.conf-fill');
+            const current = parseFloat(confFill.style.width) / 100;
+            await apiFetch(`/api/theo-os/memories/${id}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ confidence: Math.min(1.0, current + 0.2) })
+            });
+            load();
+          } else if (action === 'suppress') {
+            await apiFetch(`/api/theo-os/memories/${id}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ confidence: 0.1 })
+            });
+            load();
+          } else if (action === 'edit') {
+            const contentEl = card.querySelector('.memory-content');
+            contentEl.contentEditable = 'true';
+            contentEl.focus();
+            btn.textContent = 'Save';
+            btn.dataset.action = 'save';
+          } else if (action === 'save') {
+            const contentEl = card.querySelector('.memory-content');
+            contentEl.contentEditable = 'false';
+            await apiFetch(`/api/theo-os/memories/${id}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ content: contentEl.textContent.trim() })
+            });
+            btn.textContent = 'Edit';
+            btn.dataset.action = 'edit';
+          }
+        });
+      });
+    });
+  }
+
+  function renderChatMemory(sessions) {
+    const container = document.getElementById('chat-memory-list');
+    if (!sessions || sessions.length === 0) {
+      container.innerHTML = '<span class="cm-empty">No chat sessions recorded yet.</span>';
+      return;
+    }
+
+    container.innerHTML = sessions.map(s => {
+      const d = s.created_at ? new Date(s.created_at.replace(' ', 'T') + 'Z') : null;
+      const dateStr = d ? d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+      const shortSession = s.session_id ? s.session_id.slice(0, 8) : 'anon';
+      return `<div class="cm-entry" data-id="${s.id}">
+        <div class="cm-meta">
+          <div class="cm-date">${dateStr}</div>
+          <div class="cm-session">${shortSession}</div>
+        </div>
+        <div class="cm-summary">${esc(s.summary || '')}</div>
+        <button class="cm-delete" data-id="${s.id}" title="Delete">✕</button>
+      </div>`;
+    }).join('');
+
+    container.querySelectorAll('.cm-delete').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = btn.dataset.id;
+        await apiFetch(`/api/theo-os/chat/sessions?id=${id}`, { method: 'DELETE' }).catch(() => null);
+        btn.closest('.cm-entry').remove();
+        if (!container.querySelector('.cm-entry')) {
+          container.innerHTML = '<span class="cm-empty">No chat sessions recorded yet.</span>';
+        }
+      });
+    });
+  }
+
+  const AREA_COLORS = {
+    work: '#00d1c1',
+    health: '#ff5b5b',
+    relationships: '#9b5de5',
+    finances: '#f5c842',
+    learning: '#43b4f4',
+    creativity: '#f77f50',
+    life: '#a0aec0',
+    general: '#4a5568',
+  };
+
+  function decayClass(d) {
+    if (d >= 0.6) return '';
+    if (d >= 0.35) return 'mid';
+    return 'low';
+  }
+
+  function renderKnowledgeMap(notes) {
+    const container = document.getElementById('knowledge-areas');
+    if (!notes || notes.length === 0) {
+      container.innerHTML = '<span class="km-empty">No knowledge notes yet. They\'ll appear here as you chat.</span>';
+      return;
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+    const byArea = {};
+    for (const n of notes) {
+      const a = n.area || 'general';
+      if (!byArea[a]) byArea[a] = [];
+      byArea[a].push(n);
+    }
+
+    container.innerHTML = Object.entries(byArea).map(([area, areaNodes]) => {
+      const color = AREA_COLORS[area] || '#4a5568';
+      const rows = areaNodes.map(n => {
+        const decay = n.decay_score ?? 1;
+        const isDue = n.next_review && n.next_review <= today;
+        const pct = Math.round(decay * 100);
+        const cls = decayClass(decay);
+        return `<div class="kn-note" onclick="window.location.href='/admin/learn.html?id=${n.id}'" title="Review this note">
+          <span class="depth-badge depth-${n.depth}">${n.depth}</span>
+          <span class="kn-title">${esc(n.title)}</span>
+          ${isDue ? '<span class="kn-due">DUE</span>' : ''}
+          <div class="kn-decay"><div class="kn-decay-fill ${cls}" style="width:${pct}%"></div></div>
+        </div>`;
+      }).join('');
+
+      return `<div class="area-card">
+        <div class="area-name">
+          <span>${area}</span>
+          <span class="area-dot" style="background:${color}"></span>
+        </div>
+        ${rows}
+      </div>`;
+    }).join('');
+  }
+
+  function renderActivity(areas, days) {
+    const container = document.getElementById('activity-bars');
+    if (!areas || areas.length === 0) {
+      container.innerHTML = '<span class="act-empty">No activity recorded yet.</span>';
+      return;
+    }
+
+    const max = Math.max(...areas.map(a => a.count));
+    container.innerHTML = areas.map(a => {
+      const color = AREA_COLORS[a.area] || '#4a5568';
+      const pct = max > 0 ? Math.round((a.count / max) * 100) : 0;
+      return `<div class="act-row">
+        <span class="act-label">${esc(a.area)}</span>
+        <div class="act-track">
+          <div class="act-fill" style="width:${pct}%;background:${color}"></div>
+        </div>
+        <span class="act-count">${a.count}</span>
+      </div>`;
+    }).join('');
+  }
+
+  async function load() {
+    const [memoriesData, knowledgeData, activityData, sessionsData] = await Promise.all([
+      apiGet('/api/theo-os/memories'),
+      apiGet('/api/theo-os/knowledge').catch(() => ({ notes: [] })),
+      apiGet('/api/theo-os/activity?days=90').catch(() => ({ areas: [] })),
+      apiGet('/api/theo-os/chat/sessions?limit=20').catch(() => ({ sessions: [] })),
+    ]);
+
+    const all = memoriesData?.memories || [];
+    renderCol('fact', 'Facts', all.filter(m => m.type === 'fact'));
+    renderCol('pattern', 'Patterns', all.filter(m => m.type === 'pattern'));
+    renderCol('preference', 'Preferences', all.filter(m => m.type === 'preference'));
+    attachHandlers();
+
+    renderChatMemory(sessionsData?.sessions || []);
+    renderKnowledgeMap(knowledgeData?.notes || []);
+    renderActivity(activityData?.areas || [], activityData?.days || 90);
+  }
+
+  load();
+</script>
+</body>
+</html>
