@@ -309,6 +309,30 @@ async function buildSystemPrompt(env) {
     memory_preferences = memRows.filter(m => m.type === 'preference').map(m => `- ${m.content}`).join('\n');
   } catch (_) {}
 
+  // Load knowledge notes due for review or with low decay
+  let knowledge_due = '';
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const { results: dueNotes } = await env.THEO_OS_DB.prepare(
+      `SELECT title, depth, decay_score, area FROM knowledge_notes
+       WHERE next_review <= ? OR decay_score < 0.5
+       ORDER BY decay_score ASC LIMIT 5`
+    ).bind(today).all();
+    if (dueNotes && dueNotes.length > 0) {
+      knowledge_due = dueNotes.map(n =>
+        `- ${n.title} (${n.depth}, decay: ${n.decay_score?.toFixed(2) ?? '?'}${n.area ? `, ${n.area}` : ''})`
+      ).join('\n');
+    }
+  } catch (_) {}
+
+  const probing_rule = knowledge_due
+    ? `\nKnowledge probing:
+The following topics are due for depth review (faded or overdue). When any of these come up naturally in conversation, ask one active recall question — not "do you know X" but something that requires applying, connecting, or explaining the concept. Do this once per session at most. Never announce you are testing.
+
+Due topics:
+${knowledge_due}`
+    : '';
+
   return `You are Theo's secretary and thinking partner. You have full access to his life OS data.
 
 Your role has two modes:
@@ -324,7 +348,7 @@ Rules:
 - Never start responses with affirmations ("Great question!", "Absolutely!", etc.)
 - Keep responses concise. Long responses are usually a failure to distill.
 - Use what you know about Theo (below) actively — don't re-ask things you already know.
-
+${probing_rule}
 What I know about Theo:
 ${memory_facts || 'Nothing recorded yet.'}
 
@@ -357,10 +381,10 @@ async function saveMemory(session_id, userMessage, assistantMessage, env) {
       },
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
-        max_tokens: 400,
+        max_tokens: 500,
         messages: [{
           role: 'user',
-          content: `Analyze this exchange and extract memory. Return JSON only, no markdown.
+          content: `Analyze this exchange and extract memory and knowledge signals. Return JSON only, no markdown.
 
 {
   "summary": "1-2 sentences about what this exchange reveals about how Theo thinks",
@@ -371,15 +395,31 @@ async function saveMemory(session_id, userMessage, assistantMessage, env) {
       "confidence": 0.6-0.9,
       "area": "work|finances|health|relationships|growth|creative|exploration|life|null"
     }
+  ],
+  "knowledge": [
+    {
+      "title": "concept or topic name",
+      "area": "medicine|research|technology|philosophy|finance|general|null",
+      "depth": "aware|familiar|fluent",
+      "signal": "what in the exchange suggests this depth"
+    }
   ]
 }
 
-Rules:
+Memory rules:
 - fact: something explicitly stated as true about Theo's life/situation
 - pattern: a behavioral tendency observable from this exchange
 - preference: how Theo likes to work or be spoken to
 - Only extract 0-3 memories. Extract nothing if the exchange has no durable signal.
 - confidence 0.6 = first time seen, 0.9 = very clear explicit statement
+
+Knowledge rules:
+- Only extract topics Theo himself mentioned or demonstrated understanding of
+- aware: Theo mentioned the topic but showed limited depth
+- familiar: Theo explained it, applied it, or discussed it with moderate fluency
+- fluent: Theo connected it to other concepts, critiqued it, or explained it to others
+- Extract 0-2 knowledge signals. Skip if no clear topic signal from Theo's messages.
+- Do NOT extract topics only mentioned in the assistant response
 
 Exchange:
 User: ${userMessage}
@@ -430,6 +470,29 @@ Assistant: ${assistantMessage}`
           `INSERT INTO memories (type, content, confidence, source, area, updated_at)
            VALUES (?, ?, ?, 'chat', ?, datetime('now'))`
         ).bind(mem.type, mem.content.trim(), conf, mem.area || null).run();
+      }
+    }
+
+    // Upsert knowledge signals: soft score (3) if existing, else create at extracted depth
+    const VALID_DEPTHS = ['aware', 'familiar', 'fluent'];
+    for (const kn of (parsed.knowledge || []).slice(0, 2)) {
+      if (!kn.title) continue;
+      const depth = VALID_DEPTHS.includes(kn.depth) ? kn.depth : 'aware';
+      const existing = await env.THEO_OS_DB.prepare(
+        `SELECT id FROM knowledge_notes WHERE title LIKE ? LIMIT 1`
+      ).bind(`%${kn.title.slice(0, 40)}%`).first();
+
+      if (existing) {
+        // Soft reinforce: update last_reviewed and apply a gentle score-3 (no interval change)
+        await env.THEO_OS_DB.prepare(
+          `UPDATE knowledge_notes SET last_reviewed = datetime('now'), last_score = 3,
+           updated_at = datetime('now') WHERE id = ?`
+        ).bind(existing.id).run();
+      } else {
+        await env.THEO_OS_DB.prepare(
+          `INSERT INTO knowledge_notes (title, area, depth, decay_score, source, last_score, created_at, updated_at)
+           VALUES (?, ?, ?, 1.0, 'chat', 3, datetime('now'), datetime('now'))`
+        ).bind(kn.title.trim(), kn.area || null, depth).run();
       }
     }
   } catch (_) {}
