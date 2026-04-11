@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Knowledge Graph — Theo OS</title>
+  <link rel="icon" href="/favicon.png">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/admin/css/admin.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.30.2/cytoscape.min.js"></script>
+  <script>document.documentElement.setAttribute('data-theme', localStorage.getItem('theo_os_theme') || 'dark')</script>
+  <style>
+    .main { padding: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+    .graph-topbar { display: flex; align-items: center; gap: 14px; padding: 12px 24px; border-bottom: 1px solid var(--border-ghost); flex-shrink: 0; flex-wrap: wrap; }
+    .graph-title { font-size: 15px; font-weight: 600; color: var(--text-primary); margin-right: 8px; }
+    .filter-btn { background: none; border: 1px solid var(--border-ghost); border-radius: 16px; padding: 3px 11px; font-size: 10px; font-family: var(--font-mono); color: var(--text-secondary); cursor: pointer; transition: all 0.12s; }
+    .filter-btn.active, .filter-btn:hover { border-color: var(--teal); color: var(--teal); }
+    .filter-sep { width: 1px; height: 16px; background: var(--border-ghost); flex-shrink: 0; }
+    .infer-btn { background: none; border: 1px solid var(--border-ghost); border-radius: 6px; padding: 4px 12px; font-size: 10px; font-family: var(--font-mono); color: var(--text-tertiary); cursor: pointer; margin-left: auto; white-space: nowrap; }
+    .infer-btn:hover { border-color: var(--teal); color: var(--teal); }
+    .infer-btn:disabled { opacity: 0.5; cursor: default; }
+    #cy { flex: 1; }
+    .tooltip { position: fixed; background: var(--void-elevated); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 10px 14px; pointer-events: none; font-size: 12px; color: var(--text-primary); max-width: 220px; z-index: 100; display: none; }
+    .tooltip-type { font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-tertiary); margin-bottom: 4px; }
+    .tooltip-label { font-weight: 500; line-height: 1.4; margin-bottom: 4px; }
+    .tooltip-meta { font-family: var(--font-mono); font-size: 10px; color: var(--text-tertiary); }
+    .graph-stats { font-family: var(--font-mono); font-size: 10px; color: var(--text-tertiary); }
+    .loading-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); z-index: 50; pointer-events: none; }
+  </style>
+</head>
+<body>
+<div class="shell">
+  <nav class="sidebar">
+    <div class="sidebar-logo">THEO OS</div>
+
+    <div class="sidebar-label">Overview</div>
+    <a href="/admin/dashboard.html" class="sidebar-link">Dashboard</a>
+    <a href="/admin/capture.html" class="sidebar-link">Quick Capture</a>
+
+    <div class="sidebar-label">Life</div>
+    <a href="/admin/tasks.html" class="sidebar-link">Tasks</a>
+    <a href="/admin/goals.html" class="sidebar-link">Goals</a>
+    <a href="/admin/people.html" class="sidebar-link">People</a>
+    <a href="/admin/collections.html" class="sidebar-link">Collections</a>
+
+    <div class="sidebar-label">Mind</div>
+    <a href="/admin/journal.html" class="sidebar-link">Journal</a>
+    <a href="/admin/vision.html" class="sidebar-link">Life Vision</a>
+    <a href="/admin/review.html" class="sidebar-link">Weekly Review</a>
+
+    <div class="sidebar-label">Inbox</div>
+    <a href="/admin/email.html" class="sidebar-link">Email Triage</a>
+
+    <div class="sidebar-label">Intelligence</div>
+    <a href="/admin/chat.html" class="sidebar-link">Chat</a>
+    <a href="/admin/model.html" class="sidebar-link">The Theo Model</a>
+    <a href="/admin/knowledge.html" class="sidebar-link">Knowledge</a>
+    <a href="/admin/learn.html" class="sidebar-link">Learn</a>
+    <a href="/admin/graph.html" class="sidebar-link active">Knowledge Graph</a>
+
+    <div class="sidebar-label" style="margin-top:24px">Account</div>
+    <button class="theme-toggle" id="theme-toggle"></button>
+    <a href="#" class="sidebar-link" id="logout-btn">Sign out</a>
+  </nav>
+
+  <main class="main" style="position:relative; background:var(--void-base)">
+    <div class="graph-topbar">
+      <span class="graph-title">Knowledge Graph</span>
+      <span class="graph-stats" id="graph-stats"></span>
+      <div class="filter-sep"></div>
+
+      <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-tertiary)">Type:</span>
+      <button class="filter-btn active" data-type="all">All</button>
+      <button class="filter-btn" data-type="goal">Goals</button>
+      <button class="filter-btn" data-type="knowledge">Knowledge</button>
+      <button class="filter-btn" data-type="task">Tasks</button>
+      <button class="filter-btn" data-type="person">People</button>
+      <button class="filter-btn" data-type="journal">Journal</button>
+
+      <div class="filter-sep"></div>
+      <button class="infer-btn" id="infer-btn">↺ Re-infer connections</button>
+    </div>
+
+    <div id="loading-overlay" class="loading-overlay">Loading graph...</div>
+    <div id="cy"></div>
+    <div id="tooltip" class="tooltip">
+      <div class="tooltip-type" id="tt-type"></div>
+      <div class="tooltip-label" id="tt-label"></div>
+      <div class="tooltip-meta" id="tt-meta"></div>
+    </div>
+  </main>
+</div>
+
+<script src="/admin/js/auth.js"></script>
+<script>
+  requireAuth();
+  document.getElementById('logout-btn').addEventListener('click', e => {
+    e.preventDefault(); clearToken(); window.location.href = '/admin/index.html';
+  });
+
+  let cy = null;
+  let activeTypeFilter = 'all';
+
+  function buildCytoscape(elements) {
+    if (cy) { cy.destroy(); cy = null; }
+    const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+    const edgeColor = isDark ? '#2d3748' : '#cbd5e0';
+    const labelColor = isDark ? '#a0aec0' : '#4a5568';
+    const edgeLabelColor = isDark ? '#4a5568' : '#a0aec0';
+
+    cy = cytoscape({
+      container: document.getElementById('cy'),
+      elements,
+      style: [
+        {
+          selector: 'node',
+          style: {
+            'background-color': 'data(color)',
+            'background-opacity': 'data(decay)',
+            'width': (ele) => 12 + ele.data('weight') * 14,
+            'height': (ele) => 12 + ele.data('weight') * 14,
+            'label': 'data(label)',
+            'font-size': 9,
+            'font-family': 'Space Grotesk, sans-serif',
+            'color': labelColor,
+            'text-valign': 'bottom',
+            'text-halign': 'center',
+            'text-margin-y': 4,
+            'text-max-width': 80,
+            'text-wrap': 'ellipsis',
+            'border-width': 0,
+            'min-zoomed-font-size': 8,
+          }
+        },
+        {
+          selector: 'node[type="goal"]',
+          style: { 'shape': 'diamond', 'border-width': 1.5, 'border-color': 'data(color)', 'border-opacity': 0.6 }
+        },
+        {
+          selector: 'node[type="knowledge"]',
+          style: { 'shape': 'pentagon' }
+        },
+        {
+          selector: 'node[type="person"]',
+          style: { 'shape': 'round-rectangle' }
+        },
+        {
+          selector: 'node[type="journal"]',
+          style: { 'shape': 'ellipse', 'background-opacity': 0.35 }
+        },
+        {
+          selector: 'edge',
+          style: {
+            'width': 1,
+            'line-color': edgeColor,
+            'target-arrow-shape': 'triangle',
+            'target-arrow-color': edgeColor,
+            'curve-style': 'bezier',
+            'label': 'data(label)',
+            'font-size': 8,
+            'color': edgeLabelColor,
+            'font-family': 'JetBrains Mono, monospace',
+            'text-rotation': 'autorotate',
+            'text-margin-y': -6,
+            'opacity': 0.6,
+          }
+        },
+        {
+          selector: '.faded',
+          style: { 'opacity': 0.08 }
+        },
+        {
+          selector: '.highlighted',
+          style: { 'opacity': 1, 'z-index': 10 }
+        }
+      ],
+      layout: {
+        name: 'cose',
+        animate: true,
+        animationDuration: 900,
+        nodeRepulsion: () => 10000,
+        idealEdgeLength: () => 100,
+        nodeOverlap: 20,
+        fit: true,
+        padding: 50,
+        randomize: true,
+        componentSpacing: 100,
+      }
+    });
+
+    const tooltip = document.getElementById('tooltip');
+
+    cy.on('mouseover', 'node', e => {
+      const d = e.target.data();
+      document.getElementById('tt-type').textContent = d.type;
+      document.getElementById('tt-label').textContent = d.label;
+      const metaParts = [d.area];
+      if (d.decay < 0.99) metaParts.push(`retention: ${(d.decay * 100).toFixed(0)}%`);
+      document.getElementById('tt-meta').textContent = metaParts.filter(Boolean).join(' · ');
+      tooltip.style.display = 'block';
+
+      // Highlight connected nodes
+      cy.elements().addClass('faded');
+      e.target.removeClass('faded').addClass('highlighted');
+      e.target.connectedEdges().removeClass('faded').addClass('highlighted');
+      e.target.connectedEdges().connectedNodes().removeClass('faded').addClass('highlighted');
+    });
+
+    cy.on('mouseout', 'node', () => {
+      tooltip.style.display = 'none';
+      cy.elements().removeClass('faded highlighted');
+    });
+
+    cy.on('mousemove', e => {
+      tooltip.style.left = (e.originalEvent.clientX + 16) + 'px';
+      tooltip.style.top = (e.originalEvent.clientY - 10) + 'px';
+    });
+
+    cy.on('tap', 'node', e => {
+      const url = e.target.data('url');
+      if (url) window.open(url, '_blank');
+    });
+  }
+
+  function applyTypeFilter(type) {
+    if (!cy) return;
+    activeTypeFilter = type;
+    if (type === 'all') {
+      cy.elements().show();
+      return;
+    }
+    cy.nodes().forEach(n => {
+      if (n.data('type') === type) n.show(); else n.hide();
+    });
+    cy.edges().forEach(e => {
+      if (e.source().visible() && e.target().visible()) e.show(); else e.hide();
+    });
+  }
+
+  async function load() {
+    const overlay = document.getElementById('loading-overlay');
+    overlay.style.display = 'flex';
+    try {
+      const data = await apiGet('/api/theo-os/graph');
+      const nodes = data.nodes || [];
+      const edges = data.edges || [];
+      buildCytoscape([...nodes, ...edges]);
+      document.getElementById('graph-stats').textContent =
+        `${nodes.length} nodes · ${edges.length} edges`;
+      if (activeTypeFilter !== 'all') applyTypeFilter(activeTypeFilter);
+    } catch (e) {
+      overlay.textContent = 'Failed to load graph';
+      overlay.style.color = 'var(--coral)';
+      return;
+    }
+    overlay.style.display = 'none';
+  }
+
+  document.querySelectorAll('.filter-btn[data-type]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.filter-btn[data-type]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      applyTypeFilter(btn.dataset.type);
+    });
+  });
+
+  document.getElementById('infer-btn').addEventListener('click', async () => {
+    const btn = document.getElementById('infer-btn');
+    btn.textContent = 'Inferring...';
+    btn.disabled = true;
+    try {
+      const result = await apiPost('/api/theo-os/connections/infer', {});
+      btn.textContent = result.created > 0 ? `✓ ${result.created} new` : '✓ Up to date';
+      setTimeout(() => { btn.textContent = '↺ Re-infer connections'; btn.disabled = false; }, 3000);
+      if (result.created > 0) load();
+    } catch {
+      btn.textContent = 'Error';
+      btn.disabled = false;
+    }
+  });
+
+  load();
+</script>
+</body>
+</html>
