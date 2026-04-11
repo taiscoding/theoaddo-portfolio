@@ -74,7 +74,7 @@ Return a JSON array only, no markdown:
   let existing = [];
   try {
     const { results } = await env.THEO_OS_DB.prepare(
-      `SELECT from_type, from_id, to_type, to_id FROM connections`
+      `SELECT from_type, from_id, to_type, to_id FROM connections LIMIT 2000`
     ).all();
     existing = results || [];
   } catch (_) {}

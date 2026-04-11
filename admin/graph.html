@@ -229,11 +229,12 @@
       cy.elements().show();
       return;
     }
+    cy.elements().show();
     cy.nodes().forEach(n => {
-      if (n.data('type') === type) n.show(); else n.hide();
+      if (n.data('type') !== type) n.hide();
     });
     cy.edges().forEach(e => {
-      if (e.source().visible() && e.target().visible()) e.show(); else e.hide();
+      if (!e.source().visible() || !e.target().visible()) e.hide();
     });
   }
 
