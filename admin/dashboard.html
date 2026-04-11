@@ -484,7 +484,7 @@
     }
     const insight = pendingInsights[currentInsightIdx];
     wrapper.style.display = '';
-    document.getElementById('insight-text').textContent = insight.body || insight.text || '';
+    document.getElementById('insight-text').textContent = insight.insight || insight.body || insight.text || '';
 
     const dismissBtn = document.getElementById('insight-dismiss');
     dismissBtn.onclick = async () => {

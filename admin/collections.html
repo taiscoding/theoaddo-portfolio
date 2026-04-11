@@ -601,6 +601,49 @@
   }
 
   loadCollections();
+
+  // Cmd+K capture overlay
+  (function() {
+    const overlay = document.getElementById('capture-overlay');
+    const captureInput = document.getElementById('capture-input');
+    const captureHint = document.getElementById('capture-hint');
+    function openCapture() {
+      overlay.classList.add('open');
+      captureInput.value = '';
+      captureHint.textContent = '↵ to capture · Esc to close';
+      captureInput.focus();
+    }
+    function closeCapture() { overlay.classList.remove('open'); captureInput.value = ''; }
+    document.addEventListener('keydown', e => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); overlay.classList.contains('open') ? closeCapture() : openCapture(); }
+      if (e.key === 'Escape' && overlay.classList.contains('open')) closeCapture();
+    });
+    overlay.addEventListener('click', e => { if (e.target === overlay) closeCapture(); });
+    captureInput.addEventListener('keydown', async e => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        const text = captureInput.value.trim();
+        if (!text) return;
+        captureHint.textContent = 'Saving...';
+        try {
+          const data = await apiPost('/api/theo-os/capture', { text });
+          captureHint.textContent = (data && data.message) ? data.message : 'Captured.';
+          captureInput.value = '';
+          setTimeout(() => closeCapture(), 1500);
+        } catch { captureHint.textContent = 'Failed to save — check connection.'; }
+      }
+    });
+  })();
+
 </script>
+
+<!-- Cmd+K capture overlay -->
+<div class="capture-overlay" id="capture-overlay">
+  <div class="capture-box">
+    <textarea class="capture-input" id="capture-input"
+      placeholder="Capture anything — task, goal, idea, person, reminder, restaurant..." rows="2"></textarea>
+    <div class="capture-hint" id="capture-hint">↵ to capture · Esc to close</div>
+  </div>
+</div>
 </body>
 </html>
