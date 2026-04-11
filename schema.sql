@@ -117,6 +117,22 @@ CREATE TABLE IF NOT EXISTS chat_memory (
   created_at TEXT DEFAULT (datetime('now'))
 );
 
+CREATE TABLE IF NOT EXISTS memories (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  type TEXT NOT NULL CHECK(type IN ('fact', 'pattern', 'preference')),
+  content TEXT NOT NULL,
+  confidence REAL DEFAULT 0.7,
+  source TEXT DEFAULT 'chat',
+  area TEXT,
+  reinforcement_count INTEGER DEFAULT 1,
+  last_reinforced TEXT DEFAULT (datetime('now')),
+  created_at TEXT DEFAULT (datetime('now')),
+  updated_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_memories_type ON memories(type);
+CREATE INDEX IF NOT EXISTS idx_memories_confidence ON memories(confidence);
+
 CREATE TABLE IF NOT EXISTS connections (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   from_id INTEGER NOT NULL,
