@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard — Theo OS</title>
+  <link rel="icon" href="/favicon.png">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/admin/css/admin.css">
+  <script>document.documentElement.setAttribute('data-theme', localStorage.getItem('theo_os_theme') || 'dark')</script>
+</head>
+<body>
+<div class="shell">
+  <nav class="sidebar">
+    <div class="sidebar-logo">THEO OS</div>
+
+    <div class="sidebar-label">Overview</div>
+    <a href="/admin/dashboard.html" class="sidebar-link active">Dashboard</a>
+    <a href="/admin/capture.html" class="sidebar-link">Quick Capture</a>
+
+    <div class="sidebar-label">Life</div>
+    <a href="/admin/tasks.html" class="sidebar-link">Tasks</a>
+    <a href="/admin/goals.html" class="sidebar-link">Goals</a>
+    <a href="/admin/people.html" class="sidebar-link">People</a>
+    <a href="/admin/collections.html" class="sidebar-link">Collections</a>
+
+    <div class="sidebar-label">Mind</div>
+    <a href="/admin/journal.html" class="sidebar-link">Journal</a>
+    <a href="/admin/vision.html" class="sidebar-link">Life Vision</a>
+    <a href="/admin/review.html" class="sidebar-link">Weekly Review</a>
+
+    <div class="sidebar-label">Inbox</div>
+    <a href="/admin/email.html" class="sidebar-link">Email Triage</a>
+
+    <div class="sidebar-label">Intelligence</div>
+    <a href="/admin/chat.html" class="sidebar-link">Chat</a>
+
+    <div class="sidebar-label" style="margin-top:24px">Account</div>
+    <button class="theme-toggle" id="theme-toggle"></button>
+    <a href="#" class="sidebar-link" id="logout-btn">Sign out</a>
+  </nav>
+
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <h1 class="page-title" id="greeting">Good morning.</h1>
+        <p class="page-sub" id="date-sub"></p>
+      </div>
+    </div>
+
+    <div id="dashboard-content">
+      <p style="font-size:14px;color:var(--text-tertiary)">Dashboard stats coming in Task 4.</p>
+    </div>
+  </main>
+</div>
+
+<!-- Cmd+K capture overlay -->
+<div class="capture-overlay" id="capture-overlay">
+  <div class="capture-box">
+    <textarea class="capture-input" id="capture-input"
+      placeholder="Capture anything — task, goal, idea, person, reminder, restaurant..." rows="2"></textarea>
+    <div class="capture-hint" id="capture-hint">↵ to capture · Esc to close</div>
+  </div>
+</div>
+
+<script src="/admin/js/auth.js"></script>
+<script>
+  requireAuth();
+
+  // Greeting
+  const hour = new Date().getHours();
+  document.getElementById('greeting').textContent =
+    hour < 12 ? 'Good morning.' : hour < 17 ? 'Good afternoon.' : 'Good evening.';
+
+  // Date subtitle
+  const now = new Date();
+  document.getElementById('date-sub').textContent = now.toLocaleDateString('en-US', {
+    weekday: 'long', month: 'long', day: 'numeric'
+  });
+
+  // Sign out
+  document.getElementById('logout-btn').addEventListener('click', e => {
+    e.preventDefault();
+    clearToken();
+    window.location.href = '/admin/index.html';
+  });
+
+  // Cmd+K capture overlay
+  const overlay = document.getElementById('capture-overlay');
+  const captureInput = document.getElementById('capture-input');
+  const captureHint = document.getElementById('capture-hint');
+
+  function openCapture() {
+    overlay.classList.add('open');
+    captureInput.value = '';
+    captureHint.textContent = '↵ to capture · Esc to close';
+    captureInput.focus();
+  }
+
+  function closeCapture() {
+    overlay.classList.remove('open');
+    captureInput.value = '';
+  }
+
+  document.addEventListener('keydown', e => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      e.preventDefault();
+      overlay.classList.contains('open') ? closeCapture() : openCapture();
+    }
+    if (e.key === 'Escape' && overlay.classList.contains('open')) {
+      closeCapture();
+    }
+  });
+
+  // Close overlay when clicking outside the capture box
+  overlay.addEventListener('click', e => {
+    if (e.target === overlay) closeCapture();
+  });
+
+  // Submit on Enter (not Shift+Enter)
+  captureInput.addEventListener('keydown', async e => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      const text = captureInput.value.trim();
+      if (!text) return;
+
+      captureHint.textContent = 'Saving...';
+
+      try {
+        const data = await apiPost('/api/theo-os/capture', { text });
+        captureHint.textContent = (data && data.message) ? data.message : 'Captured.';
+        captureInput.value = '';
+        setTimeout(() => closeCapture(), 1500);
+      } catch {
+        captureHint.textContent = 'Failed to save — check connection.';
+      }
+    }
+  });
+</script>
+</body>
+</html>
