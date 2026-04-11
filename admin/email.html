@@ -197,7 +197,8 @@
 
     <!-- Google not connected callout (hidden by default) -->
     <div class="callout" id="no-auth-callout" style="display:none">
-      Google account not connected. Connect in settings to enable email triage.
+      Google account not connected.
+      <button id="email-connect-btn" style="background:none;border:none;color:var(--teal);font:inherit;cursor:pointer;padding:0;margin-left:8px">Connect Google →</button>
     </div>
 
     <!-- Status filter pills -->
@@ -490,6 +491,13 @@
     } else {
       alert('Failed to create task.');
     }
+  });
+
+  // ---- Google connect button ----
+  document.getElementById('email-connect-btn')?.addEventListener('click', () => {
+    const account = prompt('Account name (e.g. "primary", "work"):', 'primary');
+    if (!account) return;
+    window.location.href = `/api/theo-os/auth/google/connect?t=${encodeURIComponent(getToken())}&account=${encodeURIComponent(account)}`;
   });
 
   // ---- Init ----

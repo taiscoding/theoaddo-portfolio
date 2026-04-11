@@ -184,7 +184,7 @@
         <div class="agent-status">Runs on demand. Pulls unread Gmail threads and drafts replies for your review.</div>
         <div style="margin-top:12px;display:flex;gap:12px;align-items:center">
           <a href="/admin/email.html" class="mini-link">Open triage →</a>
-          <a href="/api/theo-os/auth/google/connect" id="google-connect-link" class="mini-link" style="display:none">Connect Google →</a>
+          <button id="google-connect-btn" class="mini-link" style="display:none;background:none;border:none;cursor:pointer;padding:0;font:inherit">Connect Google →</button>
         </div>
       </div>
       <div class="agent-card">
@@ -569,10 +569,24 @@
 
   load();
 
-  // Show "Connect Google" link if not connected
+  // Google connection status
   apiGet('/api/theo-os/auth/google/status').then(data => {
-    if (data && !data.connected) {
-      document.getElementById('google-connect-link').style.display = '';
+    const btn = document.getElementById('google-connect-btn');
+    if (!btn) return;
+    if (data && data.connected) {
+      const emails = (data.accounts || []).map(a => a.email).join(', ');
+      btn.textContent = `Google: ${emails} ✓`;
+      btn.style.display = '';
+      btn.style.color = 'var(--teal)';
+      btn.disabled = true;
+    } else {
+      btn.style.display = '';
+      btn.addEventListener('click', () => {
+        const account = prompt('Account name (e.g. "primary", "work"):', 'primary');
+        if (!account) return;
+        const token = getToken();
+        window.location.href = `/api/theo-os/auth/google/connect?t=${encodeURIComponent(token)}&account=${encodeURIComponent(account)}`;
+      });
     }
   }).catch(() => {});
 </script>

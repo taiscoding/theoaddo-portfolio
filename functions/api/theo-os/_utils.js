@@ -88,8 +88,9 @@ export async function timingSafeEqual(a, b) {
   return diff === 0;
 }
 
-export async function getGoogleToken(env) {
-  const stored = await env.THEO_OS_KV.get('google_tokens');
+export async function getGoogleToken(env, account = 'primary') {
+  const key = `google_tokens:${account}`;
+  const stored = await env.THEO_OS_KV.get(key);
   if (!stored) return null;
   const tokens = JSON.parse(stored);
   if (tokens.expiry_date && tokens.expiry_date > Date.now() + 60000) {
@@ -108,11 +109,11 @@ export async function getGoogleToken(env) {
   });
   const refreshed = await res.json();
   if (!refreshed.access_token) {
-    await env.THEO_OS_KV.delete('google_tokens');
+    await env.THEO_OS_KV.delete(key);
     return null;
   }
   const updated = { ...tokens, ...refreshed, expiry_date: Date.now() + refreshed.expires_in * 1000 };
-  await env.THEO_OS_KV.put('google_tokens', JSON.stringify(updated), { expirationTtl: 30 * 24 * 3600 });
+  await env.THEO_OS_KV.put(key, JSON.stringify(updated), { expirationTtl: 30 * 24 * 3600 });
   return refreshed.access_token;
 }
 
