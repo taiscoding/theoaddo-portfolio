@@ -191,6 +191,77 @@ Write observations that are honest and specific. Return JSON array: [{area, insi
   await env.THEO_OS_KV.put('insights:last_run', new Date().toISOString());
 }
 
+async function consolidateMemories(env) {
+  // 1. Decay all memories not reinforced in 14+ days (skip manual)
+  await env.THEO_OS_DB.prepare(`
+    UPDATE memories
+    SET confidence = MAX(0.1, confidence - 0.05),
+        updated_at = datetime('now')
+    WHERE last_reinforced <= date('now', '-14 days')
+      AND source != 'manual'
+  `).run();
+
+  // 2. Pull recent chat sessions (last 7 days) for cross-referencing
+  const { results: recentSessions } = await env.THEO_OS_DB.prepare(
+    `SELECT summary FROM chat_memory WHERE created_at >= datetime('now', '-7 days') ORDER BY created_at DESC LIMIT 10`
+  ).all();
+
+  if (recentSessions.length === 0) return;
+
+  // 3. Pull existing low-confidence memories for potential revision
+  const { results: weakMemories } = await env.THEO_OS_DB.prepare(
+    `SELECT id, type, content, confidence FROM memories WHERE confidence < 0.4 LIMIT 10`
+  ).all();
+
+  if (!weakMemories.length) return;
+
+  const sessionText = recentSessions.map(s => s.summary).join('\n');
+  const weakText = weakMemories.map(m => `[${m.id}] ${m.type}: ${m.content} (conf: ${m.confidence})`).join('\n');
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
+    body: JSON.stringify({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 300,
+      messages: [{
+        role: 'user',
+        content: `You are reviewing weak memories against recent session data.
+
+Recent sessions:
+${sessionText}
+
+Weak memories (below 0.4 confidence):
+${weakText}
+
+For each weak memory, decide: "reinforce" (recent sessions support it) or "delete" (contradicted or irrelevant).
+Return JSON: [{"id": N, "action": "reinforce"|"delete"}]`
+      }]
+    })
+  });
+
+  if (!res.ok) return;
+  const data = await res.json();
+  const raw = data.content?.[0]?.text;
+  if (!raw) return;
+
+  let decisions;
+  try {
+    const match = raw.match(/\[[\s\S]*\]/);
+    decisions = match ? JSON.parse(match[0]) : JSON.parse(raw);
+  } catch { return; }
+
+  for (const d of (decisions || [])) {
+    if (d.action === 'delete') {
+      await env.THEO_OS_DB.prepare(`DELETE FROM memories WHERE id = ? AND source != 'manual'`).bind(d.id).run();
+    } else if (d.action === 'reinforce') {
+      await env.THEO_OS_DB.prepare(
+        `UPDATE memories SET confidence = MIN(1.0, confidence + 0.1), last_reinforced = datetime('now'), updated_at = datetime('now') WHERE id = ?`
+      ).bind(d.id).run();
+    }
+  }
+}
+
 export default {
   async fetch(request, env, ctx) {
     // Health check only — all real traffic goes to Pages
@@ -199,6 +270,9 @@ export default {
 
   async scheduled(event, env, ctx) {
     if (event.cron === '0 6 * * *') ctx.waitUntil(runMorningBriefing(env));
-    else if (event.cron === '0 10 * * 7') ctx.waitUntil(runWeeklyInsights(env));
+    else if (event.cron === '0 10 * * 7') {
+      ctx.waitUntil(runWeeklyInsights(env));
+      ctx.waitUntil(consolidateMemories(env));
+    }
   }
 };
