@@ -296,6 +296,19 @@ async function buildSystemPrompt(env) {
     }
   } catch (_) {}
 
+  // Load high-confidence memories (>0.6)
+  let memory_facts = '';
+  let memory_patterns = '';
+  let memory_preferences = '';
+  try {
+    const { results: memRows } = await env.THEO_OS_DB.prepare(
+      `SELECT type, content FROM memories WHERE confidence > 0.6 ORDER BY confidence DESC LIMIT 20`
+    ).all();
+    memory_facts = memRows.filter(m => m.type === 'fact').map(m => `- ${m.content}`).join('\n');
+    memory_patterns = memRows.filter(m => m.type === 'pattern').map(m => `- ${m.content}`).join('\n');
+    memory_preferences = memRows.filter(m => m.type === 'preference').map(m => `- ${m.content}`).join('\n');
+  } catch (_) {}
+
   return `You are Theo's secretary and thinking partner. You have full access to his life OS data.
 
 Your role has two modes:
@@ -310,14 +323,24 @@ Rules:
 - If Theo's reasoning has a gap, name the gap directly.
 - Never start responses with affirmations ("Great question!", "Absolutely!", etc.)
 - Keep responses concise. Long responses are usually a failure to distill.
+- Use what you know about Theo (below) actively — don't re-ask things you already know.
+
+What I know about Theo:
+${memory_facts || 'Nothing recorded yet.'}
+
+Patterns I have observed:
+${memory_patterns || 'None yet.'}
+
+How he likes to work:
+${memory_preferences || 'None yet.'}
 
 Life context:
 ${life_vision_summary}
 
-Recent behavioral patterns:
+Recent behavioral patterns (MindMapper):
 ${recent_insights}
 
-What the system knows about how Theo thinks:
+Recent session memory:
 ${chat_memory_summary}`;
 }
 
