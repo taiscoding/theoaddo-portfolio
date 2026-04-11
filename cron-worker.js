@@ -262,6 +262,54 @@ Return JSON: [{"id": N, "action": "reinforce"|"delete"}]`
   }
 }
 
+async function consolidateKnowledge(env) {
+  // Recalculate decay_score for all notes using Ebbinghaus formula: e^(-k * days_since_review)
+  // k values: aware=0.14, familiar=0.05, fluent=0.02
+  // Uses SQLite's exp() function — one UPDATE per depth level
+  const depthK = [
+    { depth: 'aware', k: 0.14 },
+    { depth: 'familiar', k: 0.05 },
+    { depth: 'fluent', k: 0.02 }
+  ];
+
+  for (const { depth, k } of depthK) {
+    await env.THEO_OS_DB.prepare(`
+      UPDATE knowledge_notes
+      SET decay_score = exp(-${k} * MAX(0, CAST((julianday('now') - julianday(COALESCE(last_reviewed, created_at))) AS REAL))),
+          updated_at = datetime('now')
+      WHERE depth = ?
+    `).bind(depth).run().catch(() => {});
+  }
+
+  // Set next_review for notes that don't have one yet (first-time scheduling by depth)
+  await env.THEO_OS_DB.prepare(`
+    UPDATE knowledge_notes
+    SET next_review = CASE depth
+      WHEN 'aware'    THEN date('now', '+3 days')
+      WHEN 'familiar' THEN date('now', '+7 days')
+      WHEN 'fluent'   THEN date('now', '+21 days')
+    END,
+    updated_at = datetime('now')
+    WHERE next_review IS NULL
+  `).run().catch(() => {});
+
+  // Flag severely faded notes (decay < 0.2) as a KV hint for tomorrow's briefing
+  try {
+    const { results: severelyFaded } = await env.THEO_OS_DB.prepare(
+      `SELECT title FROM knowledge_notes WHERE decay_score < 0.2 ORDER BY decay_score ASC LIMIT 10`
+    ).all();
+
+    if (severelyFaded.length > 0) {
+      const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+      await env.THEO_OS_KV.put(
+        `knowledge_drift:${tomorrow}`,
+        JSON.stringify(severelyFaded.map(n => n.title)),
+        { expirationTtl: 48 * 3600 }
+      );
+    }
+  } catch (_) {}
+}
+
 export default {
   async fetch(request, env, ctx) {
     // Health check only — all real traffic goes to Pages
@@ -273,6 +321,7 @@ export default {
     else if (event.cron === '0 10 * * 7') {
       ctx.waitUntil(runWeeklyInsights(env));
       ctx.waitUntil(consolidateMemories(env));
+      ctx.waitUntil(consolidateKnowledge(env));
     }
   }
 };
