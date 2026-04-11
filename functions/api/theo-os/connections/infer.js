@@ -1,5 +1,7 @@
 import { json, err, requireAdmin } from '../_utils.js';
 
+const VALID_TYPES = new Set(['goal', 'knowledge', 'task', 'person', 'journal']);
+
 export async function onRequestPost({ request, env }) {
   if (!await requireAdmin(request, env)) return err('Unauthorized', 401);
 
@@ -84,6 +86,7 @@ Return a JSON array only, no markdown:
   let created = 0;
   for (const c of connections.slice(0, 15)) {
     if (!c.from_type || !c.from_id || !c.to_type || !c.to_id) continue;
+    if (!VALID_TYPES.has(c.from_type) || !VALID_TYPES.has(c.to_type)) continue;
     const key = `${c.from_type}:${c.from_id}->${c.to_type}:${c.to_id}`;
     if (existingSet.has(key)) continue;
     existingSet.add(key);
@@ -91,7 +94,7 @@ Return a JSON array only, no markdown:
       await env.THEO_OS_DB.prepare(
         `INSERT INTO connections (from_id, from_type, to_id, to_type, label, inferred, created_at)
          VALUES (?, ?, ?, ?, ?, 1, datetime('now'))`
-      ).bind(Number(c.from_id), String(c.from_type), Number(c.to_id), String(c.to_type), c.label || '').run();
+      ).bind(Number(c.from_id), String(c.from_type), Number(c.to_id), String(c.to_type), String(c.label || '').slice(0, 60)).run();
       created++;
     } catch (_) {}
   }
