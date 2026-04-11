@@ -15,21 +15,27 @@ export async function onRequestPost({ request, env, params }) {
   const notesPart = person.notes ? ` Context: ${person.notes}.` : '';
   const prompt = `Draft a warm, genuine, brief reach-out message for ${person.name}${relationshipPart}.${notesPart} Keep it natural and personal. 2-3 sentences max.`;
 
-  const aiRes = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'x-api-key': env.ANTHROPIC_API_KEY,
-      'anthropic-version': '2023-06-01',
-      'content-type': 'application/json'
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 200,
-      messages: [{ role: 'user', content: prompt }]
-    })
-  });
+  let aiRes;
+  try {
+    aiRes = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 200,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+  } catch {
+    return err('AI service unavailable', 502);
+  }
   if (!aiRes.ok) return err('AI service error', 502);
   const aiData = await aiRes.json();
-  const draft = aiData.content[0].text;
+  const draft = aiData.content?.[0]?.text;
+  if (!draft) return err('AI returned no content', 502);
   return json({ draft });
 }

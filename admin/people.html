@@ -637,11 +637,13 @@
     const name = person ? person.name : 'this person';
     if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
     const id = drawerPersonId;
-    closeDrawer();
     const ok = await apiDelete(`/api/theo-os/people/${id}`);
     if (ok) {
       allPeople = allPeople.filter(p => p.id !== id);
+      closeDrawer();
       renderGrid();
+    } else {
+      alert('Failed to delete. Please try again.');
     }
   });
 
