@@ -26,11 +26,13 @@ export async function onRequestGet({ request, env }) {
 
   // Area activity in last 14 days — for life health card signal
   const { results: areaActivity } = await env.THEO_OS_DB.prepare(`
-    SELECT area, MAX(updated_at) as last_active FROM tasks
-    WHERE updated_at >= datetime('now', '-14 days') GROUP BY area
-    UNION
-    SELECT area, MAX(updated_at) as last_active FROM goals
-    WHERE updated_at >= datetime('now', '-14 days') GROUP BY area
+    SELECT area, MAX(last_active) as last_active FROM (
+      SELECT area, MAX(updated_at) as last_active FROM tasks
+        WHERE updated_at >= datetime('now', '-14 days') GROUP BY area
+      UNION ALL
+      SELECT area, MAX(updated_at) as last_active FROM goals
+        WHERE updated_at >= datetime('now', '-14 days') GROUP BY area
+    ) GROUP BY area
   `).all();
 
   return json({

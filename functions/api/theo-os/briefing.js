@@ -51,8 +51,13 @@ No greeting. No filler. Just signal. If there's nothing to report in a section, 
     })
   });
 
+  if (!aiRes.ok) {
+    const errData = await aiRes.json().catch(() => ({}));
+    return err(`Anthropic API error: ${errData.error?.message || aiRes.status}`, 502);
+  }
   const aiData = await aiRes.json();
-  const briefingText = aiData.content?.[0]?.text || 'No briefing available.';
+  const briefingText = aiData.content?.[0]?.text;
+  if (!briefingText) return err('Anthropic returned no content', 502);
 
   const briefing = {
     text: briefingText,
