@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Life Vision — Theo OS</title>
+  <link rel="icon" href="/favicon.png">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/admin/css/admin.css">
+  <script>document.documentElement.setAttribute('data-theme', localStorage.getItem('theo_os_theme') || 'dark')</script>
+  <style>
+    /* Vision grid */
+    .vision-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+      margin-top: 24px;
+    }
+    @media (max-width: 900px) { .vision-grid { grid-template-columns: 1fr; } }
+
+    /* Vision card */
+    .vision-card {
+      background: var(--void-elevated);
+      border: 1px solid var(--border-ghost);
+      border-radius: 12px;
+      padding: 24px;
+    }
+
+    .vision-card-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+
+    .area-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .dot-teal { background: var(--teal); }
+    .dot-coral { background: var(--coral); }
+    .dot-purple { background: var(--purple); }
+    .dot-slate { background: rgba(255,255,255,0.35); }
+
+    .area-name {
+      font-family: var(--font-display);
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-primary);
+      text-transform: capitalize;
+    }
+
+    /* Field group */
+    .field-group {
+      margin-bottom: 16px;
+      position: relative;
+    }
+    .field-group:last-child { margin-bottom: 0; }
+
+    .field-label-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
+
+    .field-label {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-tertiary);
+    }
+
+    .save-indicator {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.05em;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+    }
+    .save-indicator.saved { color: var(--teal); }
+    .save-indicator.failed { color: var(--coral); }
+    .save-indicator.visible { opacity: 1; }
+
+    /* Textarea */
+    .vision-textarea {
+      width: 100%;
+      min-height: 80px;
+      padding: 10px 12px;
+      background: var(--void-surface);
+      border: 1px solid transparent;
+      border-radius: 6px;
+      color: var(--text-primary);
+      font-family: var(--font-body);
+      font-size: 13px;
+      line-height: 1.6;
+      resize: none;
+      overflow: hidden;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .vision-textarea:focus {
+      border-color: var(--border-subtle);
+    }
+    .vision-textarea::placeholder {
+      color: var(--text-tertiary);
+    }
+
+    /* Last updated */
+    .last-updated {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-tertiary);
+      margin-top: 4px;
+      letter-spacing: 0.03em;
+    }
+  </style>
+</head>
+<body>
+<div class="shell">
+  <nav class="sidebar">
+    <div class="sidebar-logo">THEO OS</div>
+
+    <div class="sidebar-label">Overview</div>
+    <a href="/admin/dashboard.html" class="sidebar-link">Dashboard</a>
+    <a href="/admin/capture.html" class="sidebar-link">Quick Capture</a>
+
+    <div class="sidebar-label">Life</div>
+    <a href="/admin/tasks.html" class="sidebar-link">Tasks</a>
+    <a href="/admin/goals.html" class="sidebar-link">Goals</a>
+    <a href="/admin/people.html" class="sidebar-link">People</a>
+    <a href="/admin/collections.html" class="sidebar-link">Collections</a>
+
+    <div class="sidebar-label">Mind</div>
+    <a href="/admin/journal.html" class="sidebar-link">Journal</a>
+    <a href="/admin/vision.html" class="sidebar-link active">Life Vision</a>
+    <a href="/admin/review.html" class="sidebar-link">Weekly Review</a>
+
+    <div class="sidebar-label">Inbox</div>
+    <a href="/admin/email.html" class="sidebar-link">Email Triage</a>
+
+    <div class="sidebar-label">Intelligence</div>
+    <a href="/admin/chat.html" class="sidebar-link">Chat</a>
+
+    <div class="sidebar-label" style="margin-top:24px">Account</div>
+    <button class="theme-toggle" id="theme-toggle"></button>
+    <a href="#" class="sidebar-link" id="logout-btn">Sign out</a>
+  </nav>
+
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <h1 class="page-title">Life Vision</h1>
+        <p class="page-sub">Your north star. The context for everything else.</p>
+        <p class="last-updated" id="last-updated" style="display:none"></p>
+      </div>
+    </div>
+
+    <div class="vision-grid" id="vision-grid">
+      <!-- populated by JS -->
+    </div>
+  </main>
+</div>
+
+<script src="/admin/js/auth.js"></script>
+<script>
+  requireAuth();
+
+  document.getElementById('logout-btn').addEventListener('click', e => {
+    e.preventDefault();
+    clearToken();
+    window.location.href = '/admin/index.html';
+  });
+
+  const AREAS = ['work', 'finances', 'health', 'relationships', 'growth', 'creative', 'exploration', 'life'];
+
+  const AREA_DOT_CLASS = {
+    work: 'dot-teal',
+    growth: 'dot-teal',
+    health: 'dot-coral',
+    life: 'dot-coral',
+    finances: 'dot-coral',
+    relationships: 'dot-purple',
+    creative: 'dot-purple',
+    exploration: 'dot-slate'
+  };
+
+  const AREA_LABELS = {
+    work: 'Work',
+    finances: 'Finances',
+    health: 'Health',
+    relationships: 'Relationships',
+    growth: 'Growth',
+    creative: 'Creative',
+    exploration: 'Exploration',
+    life: 'Life'
+  };
+
+  const FIELDS = [
+    { key: 'vision', label: 'Where I want to be', placeholder: 'Where do you want to be in this area of life?' },
+    { key: 'values', label: 'What I value here', placeholder: 'What matters most to you here?' },
+    { key: 'current_phase', label: 'What this phase looks like', placeholder: 'What does this current phase of life look like for you?' },
+    { key: 'success_definition', label: 'What success means to me', placeholder: 'What would success actually look like?' }
+  ];
+
+  function autoExpand(el) {
+    el.style.height = 'auto';
+    el.style.height = el.scrollHeight + 'px';
+  }
+
+  function showIndicator(indicator, type) {
+    indicator.textContent = type === 'saved' ? 'Saved' : 'Failed to save';
+    indicator.className = 'save-indicator ' + (type === 'saved' ? 'saved' : 'failed') + ' visible';
+    clearTimeout(indicator._timer);
+    indicator._timer = setTimeout(() => {
+      indicator.classList.remove('visible');
+    }, 1500);
+  }
+
+  function buildCard(area, data) {
+    const card = document.createElement('div');
+    card.className = 'vision-card';
+    card.dataset.area = area;
+
+    const header = document.createElement('div');
+    header.className = 'vision-card-header';
+
+    const dot = document.createElement('span');
+    dot.className = 'area-dot ' + (AREA_DOT_CLASS[area] || 'dot-slate');
+
+    const name = document.createElement('span');
+    name.className = 'area-name';
+    name.textContent = AREA_LABELS[area] || area;
+
+    header.appendChild(dot);
+    header.appendChild(name);
+    card.appendChild(header);
+
+    FIELDS.forEach(field => {
+      const group = document.createElement('div');
+      group.className = 'field-group';
+
+      const labelRow = document.createElement('div');
+      labelRow.className = 'field-label-row';
+
+      const label = document.createElement('span');
+      label.className = 'field-label';
+      label.textContent = field.label;
+
+      const indicator = document.createElement('span');
+      indicator.className = 'save-indicator';
+
+      labelRow.appendChild(label);
+      labelRow.appendChild(indicator);
+      group.appendChild(labelRow);
+
+      const textarea = document.createElement('textarea');
+      textarea.className = 'vision-textarea';
+      textarea.placeholder = field.placeholder;
+      textarea.value = data[field.key] || '';
+      textarea.dataset.field = field.key;
+      textarea.dataset.area = area;
+
+      textarea.addEventListener('input', () => autoExpand(textarea));
+
+      textarea.addEventListener('blur', async () => {
+        const cardEl = textarea.closest('.vision-card');
+        const currentArea = cardEl.dataset.area;
+
+        const body = { area: currentArea };
+        FIELDS.forEach(f => {
+          const ta = cardEl.querySelector(`[data-field="${f.key}"]`);
+          body[f.key] = ta ? ta.value.trim() || null : null;
+        });
+
+        try {
+          const res = await fetch('/api/theo-os/vision', {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${getToken()}`
+            },
+            body: JSON.stringify(body)
+          });
+
+          if (res.status === 401) {
+            clearToken();
+            window.location.href = '/admin/index.html';
+            return;
+          }
+
+          if (res.ok) {
+            showIndicator(indicator, 'saved');
+            const saved = await res.json();
+            updateLastUpdated(saved.updated_at);
+          } else {
+            showIndicator(indicator, 'failed');
+          }
+        } catch {
+          showIndicator(indicator, 'failed');
+        }
+      });
+
+      group.appendChild(textarea);
+      card.appendChild(group);
+    });
+
+    return card;
+  }
+
+  function updateLastUpdated(ts) {
+    if (!ts) return;
+    const el = document.getElementById('last-updated');
+    const d = new Date(ts + 'Z');
+    el.textContent = 'Last updated ' + d.toLocaleString();
+    el.style.display = '';
+  }
+
+  async function loadVision() {
+    const data = await apiGet('/api/theo-os/vision');
+    if (!data) return;
+
+    const grid = document.getElementById('vision-grid');
+    grid.innerHTML = '';
+
+    let latestTs = null;
+
+    AREAS.forEach(area => {
+      const areaData = data[area] || { area };
+      const card = buildCard(area, areaData);
+      grid.appendChild(card);
+
+      if (areaData.updated_at) {
+        if (!latestTs || areaData.updated_at > latestTs) {
+          latestTs = areaData.updated_at;
+        }
+      }
+    });
+
+    if (latestTs) updateLastUpdated(latestTs);
+
+    // Auto-expand all textareas after render
+    grid.querySelectorAll('.vision-textarea').forEach(ta => autoExpand(ta));
+  }
+
+  loadVision();
+</script>
+</body>
+</html>
