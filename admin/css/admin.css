@@ -199,4 +199,7 @@ textarea { resize: vertical; min-height: 80px; }
 
   .login-card { width: calc(100% - 32px); padding: 32px 20px; }
   .login-wrap { padding: 16px; }
+
+  /* Prevent iOS auto-zoom on input focus (triggered when font-size < 16px) */
+  input, select, textarea, .field input { font-size: 16px; }
 }
