@@ -45,52 +45,44 @@ Return just the question.`
     if (text) socraticPrompt = text;
   }
 
-  // Step 2: Search for best resource (gracefully skip if no API key)
+  // Step 2: Search + extract content via Tavily (gracefully skip if no API key)
   let resources = [];
   let digest = null;
 
-  if (env.BRAVE_SEARCH_API_KEY) {
+  if (env.TAVILY_API_KEY) {
     const query = `${note.title} ${note.area || ''} learn explained`.trim();
-    const searchRes = await fetch(
-      `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(query)}&count=3`,
-      { headers: { 'X-Subscription-Token': env.BRAVE_SEARCH_API_KEY, 'Accept': 'application/json' } }
-    ).catch(() => null);
+    const searchRes = await fetch('https://api.tavily.com/search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        api_key: env.TAVILY_API_KEY,
+        query,
+        search_depth: 'basic',
+        include_raw_content: true,
+        max_results: 3
+      })
+    }).catch(() => null);
 
     if (searchRes?.ok) {
       const searchData = await searchRes.json().catch(() => ({}));
-      resources = (searchData.web?.results || []).slice(0, 3).map(r => ({
+      resources = (searchData.results || []).slice(0, 3).map(r => ({
         title: r.title,
         url: r.url,
-        description: r.description || ''
+        description: r.content || ''
       }));
-    }
 
-    // Step 3: Fetch and digest top resource
-    if (resources.length > 0) {
-      const pageRes = await fetch(resources[0].url, {
-        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; TheoOS/1.0)' }
-      }).catch(() => null);
-
-      if (pageRes?.ok) {
-        const html = await pageRes.text().catch(() => '');
-        const text = html
-          .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
-          .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-          .replace(/<[^>]+>/g, ' ')
-          .replace(/\s+/g, ' ')
-          .trim()
-          .slice(0, 5000);
-
-        if (text.length > 200) {
-          const digestRes = await fetch('https://api.anthropic.com/v1/messages', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
-            body: JSON.stringify({
-              model: 'claude-sonnet-4-6',
-              max_tokens: 600,
-              messages: [{
-                role: 'user',
-                content: `You are helping Theo learn "${note.title}". He is a medical student at Brown with the following cognitive profile:
+      // Step 3: Digest top resource using Tavily's pre-extracted content
+      const topContent = searchData.results?.[0]?.raw_content?.slice(0, 5000) || '';
+      if (topContent.length > 200) {
+        const digestRes = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
+          body: JSON.stringify({
+            model: 'claude-sonnet-4-6',
+            max_tokens: 600,
+            messages: [{
+              role: 'user',
+              content: `You are helping Theo learn "${note.title}". He is a medical student at Brown with the following cognitive profile:
 - What he knows: ${memory.facts}
 - How he learns: ${memory.patterns}
 - What works for him: ${memory.preferences}
@@ -98,17 +90,16 @@ Return just the question.`
 Digest this resource and re-present the core ideas in a way that matches how he thinks. Use analogies he would find resonant. Connect to what he already knows. Make it engaging, not encyclopedic.
 
 Resource content:
-${text}
+${topContent}
 
 Write 3-5 short paragraphs. Be direct. No filler. End with one concrete takeaway.`
-              }]
-            })
-          }).catch(() => null);
+            }]
+          })
+        }).catch(() => null);
 
-          if (digestRes?.ok) {
-            const dd = await digestRes.json().catch(() => null);
-            digest = dd?.content?.[0]?.text?.trim() || null;
-          }
+        if (digestRes?.ok) {
+          const dd = await digestRes.json().catch(() => null);
+          digest = dd?.content?.[0]?.text?.trim() || null;
         }
       }
     }
