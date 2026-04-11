@@ -6,7 +6,7 @@ const SCOPES = [
   'https://www.googleapis.com/auth/calendar.readonly',
 ].join(' ');
 
-const REDIRECT_URI = 'https://theo-os.pages.dev/api/theo-os/auth/google/callback';
+const REDIRECT_URI = 'https://os.theoaddo.com/api/theo-os/auth/google/callback';
 
 // GET /api/theo-os/auth/google/connect?t=JWT&account=primary
 // Verifies JWT from query param (browser navigation can't set headers),

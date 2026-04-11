@@ -1,4 +1,4 @@
-const REDIRECT_URI = 'https://theo-os.pages.dev/api/theo-os/auth/google/callback';
+const REDIRECT_URI = 'https://os.theoaddo.com/api/theo-os/auth/google/callback';
 
 function page(body, color = '#a8e6cf') {
   return new Response(`<!DOCTYPE html>

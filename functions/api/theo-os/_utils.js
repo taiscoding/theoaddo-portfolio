@@ -1,9 +1,17 @@
-export function json(data, status = 200) {
+const ALLOWED_ORIGINS = new Set([
+  'https://theoaddo.com',
+  'https://os.theoaddo.com',
+  'https://theo-os.pages.dev',
+]);
+
+export function json(data, status = 200, request = null) {
+  const origin = request?.headers?.get('Origin') || '';
+  const corsOrigin = ALLOWED_ORIGINS.has(origin) ? origin : 'https://os.theoaddo.com';
   return new Response(JSON.stringify(data), {
     status,
     headers: {
       'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': 'https://theoaddo.com'
+      'Access-Control-Allow-Origin': corsOrigin,
     }
   });
 }
