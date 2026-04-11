@@ -310,6 +310,93 @@ async function consolidateKnowledge(env) {
   } catch (_) {}
 }
 
+async function runConnectionInference(env) {
+  try {
+    let goals = [], knowledge = [], tasks = [];
+    const [goalsRes, knowledgeRes, tasksRes] = await Promise.all([
+      env.THEO_OS_DB.prepare(`SELECT id, title, area FROM goals WHERE status = 'active' LIMIT 25`).all(),
+      env.THEO_OS_DB.prepare(`SELECT id, title, area, depth FROM knowledge_notes LIMIT 30`).all(),
+      env.THEO_OS_DB.prepare(`SELECT id, title, area FROM tasks WHERE status != 'done' LIMIT 30`).all(),
+    ]).catch(() => [{ results: [] }, { results: [] }, { results: [] }]);
+    goals = goalsRes.results || [];
+    knowledge = knowledgeRes.results || [];
+    tasks = tasksRes.results || [];
+
+    if (goals.length + knowledge.length + tasks.length < 2) return;
+
+    const entityList = [
+      ...goals.map(g => `goal:${g.id} "${g.title}" [area: ${g.area || 'general'}]`),
+      ...knowledge.map(k => `knowledge:${k.id} "${k.title}" [area: ${k.area || 'general'}, depth: ${k.depth}]`),
+      ...tasks.map(t => `task:${t.id} "${t.title}" [area: ${t.area || 'general'}]`),
+    ].join('\n');
+
+    const aiRes = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 800,
+        messages: [{
+          role: 'user',
+          content: `You are analyzing a personal life OS. Identify meaningful connections between the entities below.
+
+Entities (format: type:id "title" [metadata]):
+${entityList}
+
+Rules:
+- Only connect entities that genuinely relate (a knowledge concept supports a goal, a task advances a goal, a topic relates to another topic)
+- Prefer strong, specific relationships over vague ones
+- Labels should be short: "supports", "requires", "relates to", "builds on", "part of", "enables"
+- Generate 5-15 connections maximum
+- Do NOT connect things just because they share an area
+
+Return a JSON array only, no markdown:
+[{"from_type":"goal","from_id":1,"to_type":"knowledge","to_id":2,"label":"requires"}]`
+        }]
+      })
+    }).catch(() => null);
+
+    if (!aiRes?.ok) return;
+
+    const aiData = await aiRes.json().catch(() => null);
+    const raw = aiData?.content?.[0]?.text;
+    if (!raw) return;
+
+    let connections;
+    try {
+      const match = raw.match(/\[[\s\S]*\]/);
+      connections = match ? JSON.parse(match[0]) : JSON.parse(raw);
+    } catch { return; }
+    if (!Array.isArray(connections)) return;
+
+    const VALID_TYPES = new Set(['goal', 'knowledge', 'task', 'person', 'journal']);
+
+    let existing = [];
+    try {
+      const { results } = await env.THEO_OS_DB.prepare(
+        `SELECT from_type, from_id, to_type, to_id FROM connections`
+      ).all();
+      existing = results || [];
+    } catch (_) {}
+
+    const existingSet = new Set(
+      existing.map(c => `${c.from_type}:${c.from_id}->${c.to_type}:${c.to_id}`)
+    );
+
+    for (const c of connections.slice(0, 15)) {
+      if (!c.from_type || !c.from_id || !c.to_type || !c.to_id) continue;
+      if (!VALID_TYPES.has(c.from_type) || !VALID_TYPES.has(c.to_type)) continue;
+      const key = `${c.from_type}:${c.from_id}->${c.to_type}:${c.to_id}`;
+      if (existingSet.has(key)) continue;
+      existingSet.add(key);
+      await env.THEO_OS_DB.prepare(
+        `INSERT INTO connections (from_id, from_type, to_id, to_type, label, inferred, created_at)
+         VALUES (?, ?, ?, ?, ?, 1, datetime('now'))`
+      ).bind(Number(c.from_id), String(c.from_type), Number(c.to_id), String(c.to_type), String(c.label || '').slice(0, 60)).run().catch(() => {});
+    }
+  } catch (_) {}
+}
+
 export default {
   async fetch(request, env, ctx) {
     // Health check only — all real traffic goes to Pages
@@ -322,6 +409,7 @@ export default {
       ctx.waitUntil(runWeeklyInsights(env));
       ctx.waitUntil(consolidateMemories(env));
       ctx.waitUntil(consolidateKnowledge(env));
+      ctx.waitUntil(runConnectionInference(env));
     }
   }
 };
