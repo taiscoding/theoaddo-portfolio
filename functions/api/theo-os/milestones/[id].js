@@ -36,6 +36,7 @@ export async function onRequestPatch({ request, env, params }) {
     setClauses.push(`${key} = ?`);
     values.push(fieldsObj[key]);
   }
+  setClauses.push("updated_at = datetime('now')");
   values.push(id);
 
   await env.THEO_OS_DB.prepare(

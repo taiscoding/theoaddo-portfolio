@@ -759,6 +759,8 @@
           if (m) m.status = newStatus;
           refreshGoalCounts();
           renderMilestones();
+        } else {
+          cb.checked = !cb.checked;
         }
       });
     });
