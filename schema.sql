@@ -78,11 +78,13 @@ CREATE TABLE IF NOT EXISTS email_drafts (
   from_address TEXT,
   from_name TEXT,
   snippet TEXT,
+  urgency TEXT DEFAULT 'medium',
   draft TEXT,
   status TEXT DEFAULT 'pending',
   created_at TEXT DEFAULT (datetime('now')),
   updated_at TEXT DEFAULT (datetime('now'))
 );
+-- Migration: ALTER TABLE email_drafts ADD COLUMN urgency TEXT DEFAULT 'medium';
 
 CREATE TABLE IF NOT EXISTS insights_log (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
