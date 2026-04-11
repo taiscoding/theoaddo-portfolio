@@ -146,7 +146,7 @@
         },
         {
           selector: 'node[type="journal"]',
-          style: { 'shape': 'ellipse', 'background-opacity': 0.35 }
+          style: { 'shape': 'ellipse', 'background-opacity': (ele) => (ele.data('decay') ?? 1) * 0.4 }
         },
         {
           selector: 'edge',
@@ -270,6 +270,7 @@
     btn.disabled = true;
     try {
       const result = await apiPost('/api/theo-os/connections/infer', {});
+      if (!result) throw new Error('No response');
       btn.textContent = result.created > 0 ? `✓ ${result.created} new` : '✓ Up to date';
       setTimeout(() => { btn.textContent = '↺ Re-infer connections'; btn.disabled = false; }, 3000);
       if (result.created > 0) load();
