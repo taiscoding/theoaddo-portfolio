@@ -471,6 +471,7 @@
         return;
       }
       history = [];
+      setBeginLoading(false);
       enterReviewMode(data.step, data.question, data.context);
     } catch (e) {
       setBeginLoading(false);
@@ -501,7 +502,7 @@
         const data = await apiPost('/api/theo-os/review/next', {
           step: currentStep,
           answer,
-          history
+          history: nextHistory
         });
 
         if (!data) {
@@ -562,8 +563,10 @@
     lastQuestion = '';
     lastContext = '';
     retryFn = null;
+    reviewInProgress = false;
     document.getElementById('done-state').style.display = 'none';
     document.getElementById('idle-state').style.display = 'block';
+    setBeginLoading(false);
   });
 </script>
 </body>
