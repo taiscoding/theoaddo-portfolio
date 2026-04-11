@@ -15,6 +15,19 @@ function themeIcon(next) {
     : `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg> Dark`;
 }
 function toggleTheme() { applyTheme(getTheme() === 'dark' ? 'light' : 'dark'); }
+function initIOSZoomFix() {
+  // iOS Safari keeps zoom level after input blur — reset viewport to snap back
+  if (!/iPhone|iPad|iPod/.test(navigator.userAgent)) return;
+  const meta = document.querySelector('meta[name="viewport"]');
+  if (!meta) return;
+  document.addEventListener('focusout', () => {
+    meta.content = 'width=device-width, initial-scale=1, maximum-scale=1';
+    requestAnimationFrame(() => {
+      meta.content = 'width=device-width, initial-scale=1';
+    });
+  });
+}
+
 function initMobileSidebar() {
   const sidebar = document.querySelector('.sidebar');
   if (!sidebar) return;
@@ -39,6 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
   applyTheme(getTheme());
   document.getElementById('theme-toggle')?.addEventListener('click', toggleTheme);
   initMobileSidebar();
+  initIOSZoomFix();
 });
 
 function getToken() {
