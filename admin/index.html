@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Theo OS</title>
+  <link rel="icon" href="/favicon.png">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/admin/css/admin.css">
+</head>
+<body>
+<div class="login-wrap">
+  <div class="login-card">
+    <div class="login-logo">THEO OS</div>
+    <div class="login-label">Welcome back.</div>
+    <div class="login-sub">Your life OS. Private access only.</div>
+    <div class="field">
+      <label for="password">Password</label>
+      <input type="password" id="password" placeholder="Enter password" autofocus>
+    </div>
+    <button class="btn" id="login-btn">Sign in</button>
+    <div class="error-msg" id="error-msg">Incorrect password.</div>
+  </div>
+</div>
+<script>
+  // If already logged in with valid token, go to dashboard
+  const existing = localStorage.getItem('theo_os_token');
+  if (existing) {
+    window.location.href = '/admin/dashboard.html';
+  }
+
+  async function login() {
+    const pw = document.getElementById('password').value;
+    if (!pw) return;
+    const btn = document.getElementById('login-btn');
+    btn.disabled = true;
+    btn.textContent = 'Signing in...';
+    try {
+      const res = await fetch('/api/theo-os/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: pw })
+      });
+      const data = await res.json();
+      if (data.token) {
+        localStorage.setItem('theo_os_token', data.token);
+        window.location.href = '/admin/dashboard.html';
+      } else {
+        document.getElementById('error-msg').style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = 'Sign in';
+      }
+    } catch {
+      document.getElementById('error-msg').style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = 'Sign in';
+    }
+  }
+
+  document.getElementById('login-btn').addEventListener('click', login);
+  document.getElementById('password').addEventListener('keydown', e => {
+    if (e.key === 'Enter') login();
+  });
+</script>
+</body>
+</html>
