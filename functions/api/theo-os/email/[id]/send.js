@@ -17,17 +17,24 @@ export async function onRequestPost({ request, env, params }) {
   const token = await getGoogleToken(env);
   if (!token) return err('Google not connected', 400);
 
+  // Sanitize headers to prevent CRLF injection
+  const safeSubject = (draft.subject || '').replace(/[\r\n]/g, ' ');
+  const safeToAddress = (draft.from_address || '').replace(/[\r\n]/g, '');
+
   // Build RFC 2822 message
   const rawEmail = [
-    `To: ${draft.from_address}`,
-    `Subject: Re: ${draft.subject}`,
+    `To: ${safeToAddress}`,
+    `Subject: Re: ${safeSubject}`,
     `Content-Type: text/plain; charset=utf-8`,
     ``,
     draft.draft || ''
   ].join('\r\n');
 
-  const encoded = btoa(unescape(encodeURIComponent(rawEmail)))
-    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+  // base64url encode using TextEncoder (Workers-safe, no deprecated unescape)
+  const bytes = new TextEncoder().encode(rawEmail);
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+  const encoded = btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
 
   const sendBody = { raw: encoded };
   if (draft.thread_id) sendBody.threadId = draft.thread_id;

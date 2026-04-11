@@ -19,15 +19,15 @@ export async function onRequestPost({ request, env }) {
   const messages = listData.messages || [];
   if (messages.length === 0) return json({ staged: 0 });
 
-  // Fetch metadata for each message in parallel
-  const metaResults = await Promise.all(
+  // Fetch metadata for each message in parallel — filter out any failures
+  const metaResults = (await Promise.all(
     messages.map(m =>
       fetch(
         `https://gmail.googleapis.com/gmail/v1/users/me/messages/${m.id}?format=metadata&metadataHeaders=Subject&metadataHeaders=From`,
         { headers: { Authorization: `Bearer ${token}` } }
-      ).then(r => r.json())
+      ).then(r => r.ok ? r.json() : null).catch(() => null)
     )
-  );
+  )).filter(Boolean);
 
   // Extract fields from metadata
   const emails = metaResults.map((msg, i) => {
@@ -96,9 +96,11 @@ Return only the JSON array, no other text.`
         });
       }
     } catch {
-      // Parse failure: all emails default to medium urgency, empty draft
+      // Parse failure: staged with defaults, ai_failed flag returned below
     }
   }
+
+  const aiFailed = Object.keys(triageMap).length === 0 && emails.length > 0;
 
   // Upsert into email_drafts — INSERT OR IGNORE preserves drafts the user has already edited
   let staged = 0;
@@ -121,5 +123,5 @@ Return only the JSON array, no other text.`
     if (result.meta?.changes > 0) staged++;
   }
 
-  return json({ staged });
+  return json({ staged, ...(aiFailed ? { ai_failed: true } : {}) });
 }
