@@ -42,6 +42,7 @@ function authHeaders() {
 async function apiGet(path) {
   const res = await fetch(`${API_BASE}${path}`, { headers: authHeaders() });
   if (res.status === 401) { clearToken(); window.location.href = '/admin/index.html'; return null; }
+  if (!res.ok) return null;
   return res.json();
 }
 
@@ -50,6 +51,7 @@ async function apiPost(path, body) {
     method: 'POST', headers: authHeaders(), body: JSON.stringify(body)
   });
   if (res.status === 401) { clearToken(); window.location.href = '/admin/index.html'; return null; }
+  if (!res.ok) return null;
   return res.json();
 }
 
@@ -58,6 +60,7 @@ async function apiPut(path, body) {
     method: 'PUT', headers: authHeaders(), body: JSON.stringify(body)
   });
   if (res.status === 401) { clearToken(); window.location.href = '/admin/index.html'; return null; }
+  if (!res.ok) return null;
   return res.json();
 }
 
