@@ -63,7 +63,12 @@ Use this to infer intent when the capture is ambiguous (e.g. if patterns show he
   const aiData = await aiRes.json();
   let routed;
   try {
-    routed = JSON.parse(aiData.content[0].text);
+    let raw = aiData.content[0].text.trim();
+    // Strip markdown code fences if model ignored the no-markdown instruction
+    raw = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
+    // If there's still non-JSON preamble, extract the first {...} block
+    const match = raw.match(/\{[\s\S]*\}/);
+    routed = JSON.parse(match ? match[0] : raw);
   } catch {
     return err('Failed to parse routing response', 502);
   }
