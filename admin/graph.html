@@ -218,7 +218,7 @@
 
     cy.on('tap', 'node', e => {
       const url = e.target.data('url');
-      if (url) window.open(url, '_blank');
+      if (url) window.location.href = url;
     });
   }
 

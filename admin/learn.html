@@ -140,6 +140,26 @@
 
   function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
+  function renderMd(s) {
+    // Escape HTML first, then apply markdown patterns
+    let html = esc(s);
+    // Headers: # H1, ## H2, ### H3
+    html = html.replace(/^### (.+)$/gm, '<h4 style="font-size:13px;font-weight:600;color:var(--text-primary);margin:16px 0 6px">$1</h4>');
+    html = html.replace(/^## (.+)$/gm, '<h3 style="font-size:14px;font-weight:600;color:var(--text-primary);margin:18px 0 8px">$1</h3>');
+    html = html.replace(/^# (.+)$/gm, '<h2 style="font-size:15px;font-weight:600;color:var(--text-primary);margin:0 0 12px">$1</h2>');
+    // Bold
+    html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    // Italic
+    html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+    // Horizontal rule
+    html = html.replace(/^---$/gm, '<hr style="border:none;border-top:1px solid var(--border-ghost);margin:14px 0">');
+    // Paragraph breaks (double newline)
+    html = html.replace(/\n\n/g, '</p><p style="margin:0 0 10px">');
+    // Single newlines
+    html = html.replace(/\n/g, '<br>');
+    return '<p style="margin:0 0 10px">' + html + '</p>';
+  }
+
   function decayClass(d) {
     if (d >= 0.65) return 'decay-high';
     if (d >= 0.35) return 'decay-mid';
@@ -212,12 +232,6 @@
       ));
     });
 
-    // If ?id=N in URL, auto-start that note
-    const urlId = new URLSearchParams(window.location.search).get('id');
-    if (urlId) {
-      const target = due.find(n => String(n.id) === urlId);
-      if (target) startReview(target.id, target.title, target.depth, target.decay_score ?? 1);
-    }
   }
 
   // ── Review session ──
@@ -264,14 +278,14 @@
     const digestHtml = digest ? `
       <div class="digest-box">
         <div class="section-label">Digest</div>
-        <div class="digest-text">${esc(digest)}</div>
+        <div class="digest-text" style="white-space:normal">${renderMd(digest)}</div>
       </div>
     ` : '';
 
     body.innerHTML = `
       <div class="prompt-box">
         <div class="section-label">Reflect</div>
-        <div class="prompt-text">${esc(prompt || '')}</div>
+        <div class="prompt-text">${renderMd(prompt || '')}</div>
       </div>
 
       ${digestHtml}
@@ -338,9 +352,22 @@
 
   document.getElementById('back-btn').addEventListener('click', () => {
     showQueue();
+    loadQueue();
   });
 
-  loadQueue();
+  const directId = new URLSearchParams(window.location.search).get('id');
+  if (directId) {
+    // Came from graph/model — skip queue, go straight to review
+    apiGet(`/api/theo-os/knowledge/${directId}`)
+      .then(data => {
+        const n = data?.note;
+        if (n) startReview(n.id, n.title, n.depth, n.decay_score ?? 1);
+        else loadQueue();
+      })
+      .catch(() => loadQueue());
+  } else {
+    loadQueue();
+  }
 </script>
 </body>
 </html>

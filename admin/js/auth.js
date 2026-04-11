@@ -15,9 +15,30 @@ function themeIcon(next) {
     : `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg> Dark`;
 }
 function toggleTheme() { applyTheme(getTheme() === 'dark' ? 'light' : 'dark'); }
+function initMobileSidebar() {
+  const sidebar = document.querySelector('.sidebar');
+  if (!sidebar) return;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'sidebar-overlay';
+  document.body.appendChild(overlay);
+
+  const btn = document.createElement('button');
+  btn.className = 'menu-toggle';
+  btn.setAttribute('aria-label', 'Open menu');
+  btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>`;
+  document.body.appendChild(btn);
+
+  const close = () => { sidebar.classList.remove('open'); overlay.classList.remove('open'); };
+  btn.addEventListener('click', () => { sidebar.classList.toggle('open'); overlay.classList.toggle('open'); });
+  overlay.addEventListener('click', close);
+  sidebar.querySelectorAll('.sidebar-link').forEach(l => l.addEventListener('click', close));
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   applyTheme(getTheme());
   document.getElementById('theme-toggle')?.addEventListener('click', toggleTheme);
+  initMobileSidebar();
 });
 
 function getToken() {

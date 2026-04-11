@@ -127,9 +127,9 @@ async function runWeeklyInsights(env) {
   if (lastRun && (Date.now() - new Date(lastRun).getTime()) / 86400000 < 6) return;
 
   const today = new Date().toISOString().split('T')[0];
-  let areaActivity = [], overduePeople = [], staleGoals = [], staleCollectionsCount = 0;
+  let areaActivity = [], overduePeople = [], staleGoals = [], staleCollectionsCount = 0, lifeVision = [];
   try {
-    const [areaRes, peopleRes, goalsRes] = await Promise.all([
+    const [areaRes, peopleRes, goalsRes, visionRes] = await Promise.all([
       env.THEO_OS_DB.prepare(`
         SELECT area, MAX(last_active) as last_active FROM (
           SELECT area, MAX(updated_at) as last_active FROM tasks WHERE updated_at >= datetime('now', '-14 days') GROUP BY area
@@ -140,23 +140,44 @@ async function runWeeklyInsights(env) {
       env.THEO_OS_DB.prepare(`
         SELECT g.title, g.area FROM goals g WHERE g.status = 'active'
         AND NOT EXISTS (SELECT 1 FROM tasks t WHERE t.goal_id = g.id AND t.updated_at >= datetime('now', '-30 days'))`).all(),
+      env.THEO_OS_DB.prepare(`SELECT area, vision, current_phase FROM life_vision WHERE vision IS NOT NULL`).all(),
     ]);
     areaActivity = areaRes.results || [];
     overduePeople = peopleRes.results || [];
     staleGoals = goalsRes.results || [];
+    lifeVision = visionRes.results || [];
     const staleCollRes = await env.THEO_OS_DB.prepare(`SELECT COUNT(*) as count FROM collections WHERE status = 'want' AND created_at <= datetime('now', '-30 days')`).first();
     staleCollectionsCount = staleCollRes?.count || 0;
   } catch (_) {}
 
-  const prompt = `You are analyzing behavioral data for a personal life OS. Generate 3-5 behavioral pattern observations.
+  const activeAreas = new Set(areaActivity.map(a => a.area));
+  const visionText = lifeVision.length > 0
+    ? lifeVision.map(v => `${v.area}: "${v.vision}"${v.current_phase ? ` (current phase: ${v.current_phase})` : ''}`).join('\n')
+    : 'No life vision recorded.';
 
-Data:
-- Life area activity (last 14 days): ${areaActivity.length > 0 ? areaActivity.map(a => `${a.area}: last active ${a.last_active}`).join(', ') : 'no activity recorded'}
-- People overdue for contact: ${overduePeople.length > 0 ? overduePeople.map(p => `${p.name} (${p.relationship}, overdue since ${p.next_touchpoint})`).join(', ') : 'none'}
+  // Flag areas with stated vision but no recent activity
+  const driftingAreas = lifeVision
+    .filter(v => !activeAreas.has(v.area))
+    .map(v => v.area);
+
+  const prompt = `You are the MindMapper for a personal life OS. Generate 3-5 behavioral pattern observations that are honest, specific, and connect behavior to stated intentions where possible.
+
+What Theo says matters to him (life vision):
+${visionText}
+
+Behavioral data (last 14 days):
+- Active life areas: ${areaActivity.length > 0 ? areaActivity.map(a => `${a.area} (last: ${a.last_active})`).join(', ') : 'none'}
+- Areas with stated vision but NO recent activity: ${driftingAreas.length > 0 ? driftingAreas.join(', ') : 'none'}
+- People overdue for contact: ${overduePeople.length > 0 ? overduePeople.map(p => `${p.name} (${p.relationship})`).join(', ') : 'none'}
 - Goals with no recent task progress: ${staleGoals.length > 0 ? staleGoals.map(g => `${g.title} [${g.area}]`).join(', ') : 'none'}
 - Collections waiting over 30 days: ${staleCollectionsCount} items
 
-Write observations that are honest and specific. Return JSON array: [{area, insight, type}] where type is one of: drift, decay, pattern, relationship`;
+Rules:
+- Where behavior contradicts a stated vision, name the contradiction directly (e.g. "You said X matters, but there's been no activity in 14 days")
+- Do not soften observations
+- Be specific, not generic
+
+Return JSON array only: [{area, insight, type}] where type is one of: drift, decay, pattern, relationship`;
 
   const aiRes = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',

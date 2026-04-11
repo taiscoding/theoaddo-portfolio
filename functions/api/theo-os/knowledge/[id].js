@@ -1,5 +1,20 @@
 import { json, err, requireAdmin } from '../_utils.js';
 
+// GET /api/theo-os/knowledge/[id]
+export async function onRequestGet({ request, env, params }) {
+  if (!await requireAdmin(request, env)) return err('Unauthorized', 401);
+
+  const id = Number(params.id);
+  if (!id || isNaN(id)) return err('Invalid id');
+
+  const note = await env.THEO_OS_DB.prepare(
+    'SELECT * FROM knowledge_notes WHERE id = ?'
+  ).bind(id).first();
+
+  if (!note) return err('Not found', 404);
+  return json({ note }, 200, request);
+}
+
 // PATCH /api/theo-os/knowledge/[id]
 export async function onRequestPatch({ request, env, params }) {
   if (!await requireAdmin(request, env)) return err('Unauthorized', 401);

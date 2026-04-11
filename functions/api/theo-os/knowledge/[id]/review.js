@@ -79,7 +79,7 @@ Return just the question.`
           headers: { 'Content-Type': 'application/json', 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
           body: JSON.stringify({
             model: 'claude-sonnet-4-6',
-            max_tokens: 600,
+            max_tokens: 1200,
             messages: [{
               role: 'user',
               content: `You are helping Theo learn "${note.title}". He is a medical student at Brown with the following cognitive profile:

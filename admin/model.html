@@ -32,6 +32,47 @@
     .add-memory-btn { align-self: flex-end; background: none; border: 1px solid var(--border-subtle); border-radius: 6px; padding: 5px 12px; font-size: 11px; font-family: var(--font-mono); color: var(--teal); cursor: pointer; }
     .add-memory-btn:hover { background: var(--teal-subtle); }
     @media (max-width: 900px) { .model-grid { grid-template-columns: 1fr; } }
+
+    /* Knowledge Map */
+    .section-title { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-tertiary); margin: 32px 0 16px; }
+    .knowledge-areas { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+    .area-card { background: var(--void-elevated); border: 1px solid var(--border-ghost); border-radius: 8px; padding: 14px 16px; }
+    .area-name { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-tertiary); margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; }
+    .area-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .kn-note { display: flex; align-items: center; gap: 8px; padding: 5px 0; border-bottom: 1px solid var(--border-ghost); cursor: pointer; }
+    .kn-note:last-child { border-bottom: none; }
+    .kn-note:hover .kn-title { color: var(--teal); }
+    .depth-badge { font-family: var(--font-mono); font-size: 8px; letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 6px; border-radius: 10px; flex-shrink: 0; }
+    .depth-aware { background: rgba(160,174,192,0.12); color: var(--text-tertiary); }
+    .depth-familiar { background: rgba(245,200,66,0.12); color: #f5c842; }
+    .depth-fluent { background: rgba(0,209,193,0.12); color: var(--teal); }
+    .kn-title { font-size: 12px; color: var(--text-secondary); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .kn-decay { width: 32px; height: 2px; background: var(--border-ghost); border-radius: 2px; flex-shrink: 0; }
+    .kn-decay-fill { height: 100%; border-radius: 2px; background: var(--teal); }
+    .kn-decay-fill.low { background: var(--coral); }
+    .kn-decay-fill.mid { background: #f5c842; }
+    .kn-due { font-family: var(--font-mono); font-size: 8px; color: var(--coral); margin-left: 2px; }
+    .km-empty { font-size: 12px; color: var(--text-tertiary); font-family: var(--font-mono); }
+
+    /* Chat Memory Log */
+    .chat-memory-list { display: flex; flex-direction: column; gap: 8px; max-width: 760px; }
+    .cm-entry { background: var(--void-elevated); border: 1px solid var(--border-ghost); border-radius: 8px; padding: 12px 16px; display: flex; align-items: flex-start; gap: 14px; }
+    .cm-meta { flex-shrink: 0; width: 80px; }
+    .cm-date { font-family: var(--font-mono); font-size: 10px; color: var(--text-tertiary); }
+    .cm-session { font-family: var(--font-mono); font-size: 9px; color: var(--text-tertiary); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 80px; }
+    .cm-summary { font-size: 13px; color: var(--text-secondary); line-height: 1.55; flex: 1; }
+    .cm-delete { background: none; border: none; font-family: var(--font-mono); font-size: 10px; color: var(--text-tertiary); cursor: pointer; padding: 0; flex-shrink: 0; align-self: flex-start; margin-top: 2px; }
+    .cm-delete:hover { color: var(--coral); }
+    .cm-empty { font-family: var(--font-mono); font-size: 12px; color: var(--text-tertiary); }
+
+    /* Activity Chart */
+    .activity-bars { display: flex; flex-direction: column; gap: 10px; max-width: 560px; }
+    .act-row { display: flex; align-items: center; gap: 12px; }
+    .act-label { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-secondary); width: 90px; flex-shrink: 0; text-align: right; }
+    .act-track { flex: 1; height: 8px; background: var(--border-ghost); border-radius: 4px; overflow: hidden; }
+    .act-fill { height: 100%; border-radius: 4px; transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
+    .act-count { font-family: var(--font-mono); font-size: 10px; color: var(--text-tertiary); width: 28px; flex-shrink: 0; }
+    .act-empty { font-size: 12px; color: var(--text-tertiary); font-family: var(--font-mono); }
   </style>
 </head>
 <body>
@@ -82,6 +123,15 @@
       <div class="model-col" id="col-pattern"></div>
       <div class="model-col" id="col-preference"></div>
     </div>
+
+    <p class="section-title">Chat Memory Log <span style="font-size:9px;color:var(--text-tertiary);font-weight:400;text-transform:none;letter-spacing:0">— what the system has learned</span></p>
+    <div class="chat-memory-list" id="chat-memory-list"><span class="cm-empty">Loading...</span></div>
+
+    <p class="section-title">Knowledge Map</p>
+    <div class="knowledge-areas" id="knowledge-areas"><span class="km-empty">Loading...</span></div>
+
+    <p class="section-title">Life Area Activity <span style="font-size:9px;color:var(--text-tertiary);font-weight:400;text-transform:none;letter-spacing:0">— last 90 days</span></p>
+    <div class="activity-bars" id="activity-bars"><span class="act-empty">Loading...</span></div>
   </main>
 </div>
 
@@ -137,15 +187,6 @@
       </div>
       ${cards}
     `;
-  }
-
-  async function load() {
-    const data = await apiGet('/api/theo-os/memories');
-    const all = data?.memories || [];
-    renderCol('fact', 'Facts', all.filter(m => m.type === 'fact'));
-    renderCol('pattern', 'Patterns', all.filter(m => m.type === 'pattern'));
-    renderCol('preference', 'Preferences', all.filter(m => m.type === 'preference'));
-    attachHandlers();
   }
 
   function attachHandlers() {
@@ -206,6 +247,136 @@
         });
       });
     });
+  }
+
+  function renderChatMemory(sessions) {
+    const container = document.getElementById('chat-memory-list');
+    if (!sessions || sessions.length === 0) {
+      container.innerHTML = '<span class="cm-empty">No chat sessions recorded yet.</span>';
+      return;
+    }
+
+    container.innerHTML = sessions.map(s => {
+      const d = s.created_at ? new Date(s.created_at.replace(' ', 'T') + 'Z') : null;
+      const dateStr = d ? d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+      const shortSession = s.session_id ? s.session_id.slice(0, 8) : 'anon';
+      return `<div class="cm-entry" data-id="${s.id}">
+        <div class="cm-meta">
+          <div class="cm-date">${dateStr}</div>
+          <div class="cm-session">${shortSession}</div>
+        </div>
+        <div class="cm-summary">${esc(s.summary || '')}</div>
+        <button class="cm-delete" data-id="${s.id}" title="Delete">✕</button>
+      </div>`;
+    }).join('');
+
+    container.querySelectorAll('.cm-delete').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = btn.dataset.id;
+        await apiFetch(`/api/theo-os/chat/sessions?id=${id}`, { method: 'DELETE' }).catch(() => null);
+        btn.closest('.cm-entry').remove();
+        if (!container.querySelector('.cm-entry')) {
+          container.innerHTML = '<span class="cm-empty">No chat sessions recorded yet.</span>';
+        }
+      });
+    });
+  }
+
+  const AREA_COLORS = {
+    work: '#00d1c1',
+    health: '#ff5b5b',
+    relationships: '#9b5de5',
+    finances: '#f5c842',
+    learning: '#43b4f4',
+    creativity: '#f77f50',
+    life: '#a0aec0',
+    general: '#4a5568',
+  };
+
+  function decayClass(d) {
+    if (d >= 0.6) return '';
+    if (d >= 0.35) return 'mid';
+    return 'low';
+  }
+
+  function renderKnowledgeMap(notes) {
+    const container = document.getElementById('knowledge-areas');
+    if (!notes || notes.length === 0) {
+      container.innerHTML = '<span class="km-empty">No knowledge notes yet. They\'ll appear here as you chat.</span>';
+      return;
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+    const byArea = {};
+    for (const n of notes) {
+      const a = n.area || 'general';
+      if (!byArea[a]) byArea[a] = [];
+      byArea[a].push(n);
+    }
+
+    container.innerHTML = Object.entries(byArea).map(([area, areaNodes]) => {
+      const color = AREA_COLORS[area] || '#4a5568';
+      const rows = areaNodes.map(n => {
+        const decay = n.decay_score ?? 1;
+        const isDue = n.next_review && n.next_review <= today;
+        const pct = Math.round(decay * 100);
+        const cls = decayClass(decay);
+        return `<div class="kn-note" onclick="window.location.href='/admin/learn.html?id=${n.id}'" title="Review this note">
+          <span class="depth-badge depth-${n.depth}">${n.depth}</span>
+          <span class="kn-title">${esc(n.title)}</span>
+          ${isDue ? '<span class="kn-due">DUE</span>' : ''}
+          <div class="kn-decay"><div class="kn-decay-fill ${cls}" style="width:${pct}%"></div></div>
+        </div>`;
+      }).join('');
+
+      return `<div class="area-card">
+        <div class="area-name">
+          <span>${area}</span>
+          <span class="area-dot" style="background:${color}"></span>
+        </div>
+        ${rows}
+      </div>`;
+    }).join('');
+  }
+
+  function renderActivity(areas, days) {
+    const container = document.getElementById('activity-bars');
+    if (!areas || areas.length === 0) {
+      container.innerHTML = '<span class="act-empty">No activity recorded yet.</span>';
+      return;
+    }
+
+    const max = Math.max(...areas.map(a => a.count));
+    container.innerHTML = areas.map(a => {
+      const color = AREA_COLORS[a.area] || '#4a5568';
+      const pct = max > 0 ? Math.round((a.count / max) * 100) : 0;
+      return `<div class="act-row">
+        <span class="act-label">${esc(a.area)}</span>
+        <div class="act-track">
+          <div class="act-fill" style="width:${pct}%;background:${color}"></div>
+        </div>
+        <span class="act-count">${a.count}</span>
+      </div>`;
+    }).join('');
+  }
+
+  async function load() {
+    const [memoriesData, knowledgeData, activityData, sessionsData] = await Promise.all([
+      apiGet('/api/theo-os/memories'),
+      apiGet('/api/theo-os/knowledge').catch(() => ({ notes: [] })),
+      apiGet('/api/theo-os/activity?days=90').catch(() => ({ areas: [] })),
+      apiGet('/api/theo-os/chat/sessions?limit=20').catch(() => ({ sessions: [] })),
+    ]);
+
+    const all = memoriesData?.memories || [];
+    renderCol('fact', 'Facts', all.filter(m => m.type === 'fact'));
+    renderCol('pattern', 'Patterns', all.filter(m => m.type === 'pattern'));
+    renderCol('preference', 'Preferences', all.filter(m => m.type === 'preference'));
+    attachHandlers();
+
+    renderChatMemory(sessionsData?.sessions || []);
+    renderKnowledgeMap(knowledgeData?.notes || []);
+    renderActivity(activityData?.areas || [], activityData?.days || 90);
   }
 
   load();

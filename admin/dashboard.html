@@ -85,6 +85,10 @@
     .insight-text { font-size: 13px; color: var(--text-secondary); line-height: 1.65; }
     .insight-dismiss { background: none; border: none; color: var(--text-tertiary); cursor: pointer; font-size: 16px; padding: 0 4px; line-height: 1; transition: color 0.2s; flex-shrink: 0; }
     .insight-dismiss:hover { color: var(--text-primary); }
+    .insight-run-btn { background: none; border: 1px solid var(--border-ghost); border-radius: 4px; padding: 2px 9px; font-size: 10px; font-family: var(--font-mono); color: var(--text-tertiary); cursor: pointer; transition: all 0.15s; }
+    .insight-run-btn:hover { border-color: var(--teal); color: var(--teal); }
+    .insight-run-btn:disabled { opacity: 0.4; cursor: default; }
+    .insight-empty { font-family: var(--font-mono); font-size: 12px; color: var(--text-tertiary); margin-bottom: 32px; }
   </style>
 </head>
 <body>
@@ -153,15 +157,21 @@
     </div>
 
     <!-- MindMapper Insight -->
-    <div id="insight-wrapper" style="display:none">
-      <div class="section-label">MindMapper</div>
-      <div class="insight-card" id="insight-card">
-        <div class="insight-body">
-          <div class="insight-agent">Weekly Insight Agent</div>
-          <div class="insight-text" id="insight-text"></div>
-        </div>
-        <button class="insight-dismiss" id="insight-dismiss" title="Dismiss">&#x2715;</button>
+    <div id="insight-wrapper">
+      <div class="section-label" style="display:flex;align-items:center;justify-content:space-between">
+        MindMapper
+        <button class="insight-run-btn" id="insight-run-btn">↺ Run now</button>
       </div>
+      <div id="insight-card-wrap" style="display:none">
+        <div class="insight-card">
+          <div class="insight-body">
+            <div class="insight-agent">Weekly Insight Agent</div>
+            <div class="insight-text" id="insight-text"></div>
+          </div>
+          <button class="insight-dismiss" id="insight-dismiss" title="Dismiss">&#x2715;</button>
+        </div>
+      </div>
+      <div id="insight-empty" class="insight-empty">No insights yet. Hit "Run now" to generate.</div>
     </div>
 
     <!-- Agents -->
@@ -482,13 +492,16 @@
   }
 
   function showInsight() {
-    const wrapper = document.getElementById('insight-wrapper');
+    const cardWrap = document.getElementById('insight-card-wrap');
+    const empty = document.getElementById('insight-empty');
     if (currentInsightIdx >= pendingInsights.length) {
-      wrapper.style.display = 'none';
+      cardWrap.style.display = 'none';
+      empty.style.display = '';
       return;
     }
     const insight = pendingInsights[currentInsightIdx];
-    wrapper.style.display = '';
+    cardWrap.style.display = '';
+    empty.style.display = 'none';
     document.getElementById('insight-text').textContent = insight.insight || insight.body || insight.text || '';
 
     const dismissBtn = document.getElementById('insight-dismiss');
@@ -498,6 +511,23 @@
       showInsight();
     };
   }
+
+  document.getElementById('insight-run-btn').addEventListener('click', async () => {
+    const btn = document.getElementById('insight-run-btn');
+    btn.textContent = 'Running...';
+    btn.disabled = true;
+    try {
+      const result = await apiPost('/api/theo-os/insights/run', {});
+      if (result?.insights) {
+        renderInsight(result.insights);
+      }
+      btn.textContent = result?.created > 0 ? `✓ ${result.created} generated` : '✓ Done';
+      setTimeout(() => { btn.textContent = '↺ Run now'; btn.disabled = false; }, 3000);
+    } catch {
+      btn.textContent = 'Error';
+      btn.disabled = false;
+    }
+  });
 
   // -- Stats Breakdown --
 

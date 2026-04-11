@@ -126,6 +126,7 @@
     .btn-send { background: var(--teal); color: #000; }
     .btn-dismiss { background: var(--void-surface); color: var(--text-secondary); border: 1px solid var(--border-subtle); }
     .btn-task { background: rgba(187,143,206,0.15); color: var(--purple); border: 1px solid rgba(187,143,206,0.25); }
+    .btn-snooze { background: var(--void-surface); color: var(--text-tertiary); border: 1px solid var(--border-ghost); }
 
     /* Empty state */
     .empty-state {
@@ -317,6 +318,7 @@
           <button class="action-btn btn-send" data-id="${d.id}" data-action="send">Send</button>
           <button class="action-btn btn-dismiss" data-id="${d.id}" data-action="dismiss">Dismiss</button>
           <button class="action-btn btn-task" data-id="${d.id}" data-subject="${esc(d.subject)}" data-action="task">Convert to Task</button>
+          <button class="action-btn btn-snooze" data-id="${d.id}" data-action="snooze">Snooze</button>
         </div>` : ''}
       </div>
     `).join('');
@@ -375,6 +377,20 @@
       } else {
         btn.disabled = false;
         alert('Failed to dismiss.');
+      }
+    }
+
+    if (action === 'snooze') {
+      btn.disabled = true;
+      btn.textContent = 'Snoozed';
+      const result = await apiPost(`/api/theo-os/email/${id}/snooze`, {});
+      if (result && result.ok) {
+        card.style.opacity = '0.4';
+        card.style.transition = 'opacity 0.3s';
+        setTimeout(() => { card.remove(); maybeShowEmpty(); }, 320);
+      } else {
+        btn.disabled = false;
+        btn.textContent = 'Snooze';
       }
     }
 
@@ -489,12 +505,21 @@
     saveBtn.disabled = false;
     saveBtn.textContent = 'Create Task';
 
-    if (created) {
-      taskModal.style.display = 'none';
-      taskModalDraftId = null;
-    } else {
-      alert('Failed to create task.');
+    if (!created) { alert('Failed to create task.'); return; }
+
+    // Dismiss the email and remove its card
+    if (taskModalDraftId) {
+      await apiPost(`/api/theo-os/email/${taskModalDraftId}/dismiss`, {});
+      const card = document.querySelector(`.email-card[data-id="${taskModalDraftId}"]`);
+      if (card) {
+        card.style.opacity = '0.4';
+        card.style.transition = 'opacity 0.3s';
+        setTimeout(() => { card.remove(); maybeShowEmpty(); }, 320);
+      }
     }
+
+    taskModal.style.display = 'none';
+    taskModalDraftId = null;
   });
 
   // ---- Google connect button ----
