@@ -325,7 +325,7 @@ ${chat_memory_summary}`;
 
 async function saveMemory(session_id, userMessage, assistantMessage, env) {
   try {
-    const summaryRes = await fetch('https://api.anthropic.com/v1/messages', {
+    const extractRes = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -333,27 +333,82 @@ async function saveMemory(session_id, userMessage, assistantMessage, env) {
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-haiku-4-5',
-        max_tokens: 150,
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 400,
         messages: [{
           role: 'user',
-          content: `Summarize in 1-2 sentences what this exchange reveals about how Theo thinks or what is on his mind. Be specific and pattern-focused, not generic.
+          content: `Analyze this exchange and extract memory. Return JSON only, no markdown.
 
+{
+  "summary": "1-2 sentences about what this exchange reveals about how Theo thinks",
+  "memories": [
+    {
+      "type": "fact|pattern|preference",
+      "content": "specific, concrete memory string under 100 chars",
+      "confidence": 0.6-0.9,
+      "area": "work|finances|health|relationships|growth|creative|exploration|life|null"
+    }
+  ]
+}
+
+Rules:
+- fact: something explicitly stated as true about Theo's life/situation
+- pattern: a behavioral tendency observable from this exchange
+- preference: how Theo likes to work or be spoken to
+- Only extract 0-3 memories. Extract nothing if the exchange has no durable signal.
+- confidence 0.6 = first time seen, 0.9 = very clear explicit statement
+
+Exchange:
 User: ${userMessage}
 Assistant: ${assistantMessage}`
         }]
       })
     });
 
-    if (!summaryRes.ok) return;
-    const summaryData = await summaryRes.json();
-    const summary = summaryData.content?.[0]?.text;
-    if (!summary) return;
+    if (!extractRes.ok) return;
+    const extractData = await extractRes.json();
+    const raw = extractData.content?.[0]?.text;
+    if (!raw) return;
 
-    await env.THEO_OS_DB.prepare(
-      `INSERT INTO chat_memory (session_id, summary, knowledge_updates, pattern_observations, created_at)
-       VALUES (?, ?, NULL, NULL, datetime('now'))`
-    ).bind(session_id || null, summary).run();
+    let parsed;
+    try {
+      const match = raw.match(/\{[\s\S]*\}/);
+      parsed = match ? JSON.parse(match[0]) : JSON.parse(raw);
+    } catch { return; }
+
+    // Save session summary
+    const summary = parsed.summary;
+    if (summary) {
+      await env.THEO_OS_DB.prepare(
+        `INSERT INTO chat_memory (session_id, summary, created_at) VALUES (?, ?, datetime('now'))`
+      ).bind(session_id || null, summary).run();
+    }
+
+    // Upsert memories: reinforce if similar exists, else create
+    for (const mem of (parsed.memories || []).slice(0, 3)) {
+      if (!mem.type || !mem.content) continue;
+      const conf = Math.min(1.0, Math.max(0.1, parseFloat(mem.confidence) || 0.7));
+
+      // Check for existing similar memory (same type + overlapping content)
+      const { results: existing } = await env.THEO_OS_DB.prepare(
+        `SELECT id, confidence, reinforcement_count FROM memories
+         WHERE type = ? AND content LIKE ? LIMIT 1`
+      ).bind(mem.type, `%${mem.content.slice(0, 30)}%`).all();
+
+      if (existing.length > 0) {
+        const e = existing[0];
+        const newConf = Math.min(1.0, e.confidence + 0.1);
+        await env.THEO_OS_DB.prepare(
+          `UPDATE memories SET confidence = ?, reinforcement_count = reinforcement_count + 1,
+           last_reinforced = datetime('now'), updated_at = datetime('now') WHERE id = ?`
+        ).bind(newConf, e.id).run();
+      } else {
+        await env.THEO_OS_DB.prepare(
+          `INSERT INTO memories (type, content, confidence, source, area, updated_at)
+           VALUES (?, ?, ?, 'chat', ?, datetime('now'))`
+        ).bind(mem.type, mem.content.trim(), conf, mem.area || null).run();
+      }
+    }
   } catch (_) {}
 }
 
