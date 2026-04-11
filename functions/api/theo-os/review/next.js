@@ -1,4 +1,4 @@
-import { json, err, requireAdmin } from '../_utils.js';
+import { json, err, requireAdmin, loadMemoryContext } from '../_utils.js';
 
 async function callAnthropic(messages, systemPrompt, env) {
   const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -80,6 +80,8 @@ export async function onRequestPost({ request, env }) {
   if (!answer || !String(answer).trim()) return err('answer is required');
   if (!Array.isArray(history)) return err('history is required');
 
+  const memory = await loadMemoryContext(env);
+
   const nextStep = step + 1;
 
   // Build conversation context for Anthropic
@@ -138,6 +140,12 @@ Generate a closing summary that captures the key theme of this week, the main pa
   if (!persona) return err(`No persona defined for step ${nextStep}`);
 
   const systemPrompt = `You are Theo's weekly review facilitator. You ask focused, honest, probing questions.
+
+Known patterns about Theo (use to make questions specific, not generic):
+${memory.patterns}
+
+Do not ask about things already well-understood. Probe the areas where patterns show avoidance or drift.
+
 Your current focus: ${persona.focus}.
 ${persona.guidance}
 

@@ -1,4 +1,4 @@
-import { json, err, requireAdmin } from '../_utils.js';
+import { json, err, requireAdmin, loadMemoryContext } from '../_utils.js';
 
 async function callAnthropic(messages, systemPrompt, env) {
   const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -99,8 +99,16 @@ export async function onRequestPost({ request, env }) {
     completedSummary
   };
 
+  const memory = await loadMemoryContext(env);
+
   // Call Anthropic to generate the Step 1 question
   const systemPrompt = `You are Theo's weekly review facilitator. You generate focused, honest questions for a structured weekly review.
+
+Known patterns about Theo (use to make questions specific, not generic):
+${memory.patterns}
+
+Do not ask about things already well-understood. Probe the areas where patterns show avoidance or drift.
+
 Keep questions grounded — reference real data when available. Be direct, not motivational.
 Your response should be ONLY a JSON object with two fields: "question" (the Step 1 question string) and "context" (a brief 2-3 sentence context summary of what the system found this week).`;
 
