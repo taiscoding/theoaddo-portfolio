@@ -315,7 +315,7 @@
   function updateLastUpdated(ts) {
     if (!ts) return;
     const el = document.getElementById('last-updated');
-    const d = new Date(ts + 'Z');
+    const d = new Date(ts.replace(' ', 'T') + 'Z');
     el.textContent = 'Last updated ' + d.toLocaleString();
     el.style.display = '';
   }
