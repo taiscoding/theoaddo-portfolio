@@ -43,11 +43,11 @@ export async function onRequestPut({ request, env }) {
   let results;
   try {
     ({ results } = await env.THEO_OS_DB.prepare(`
-      INSERT INTO life_vision (area, vision, values, current_phase, success_definition, updated_at)
+      INSERT INTO life_vision (area, vision, "values", current_phase, success_definition, updated_at)
       VALUES (?, ?, ?, ?, ?, datetime('now'))
       ON CONFLICT(area) DO UPDATE SET
         vision = excluded.vision,
-        values = excluded.values,
+        "values" = excluded."values",
         current_phase = excluded.current_phase,
         success_definition = excluded.success_definition,
         updated_at = datetime('now')

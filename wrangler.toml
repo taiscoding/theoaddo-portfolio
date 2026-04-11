@@ -5,11 +5,11 @@ compatibility_date = "2025-01-01"
 [[d1_databases]]
 binding = "THEO_OS_DB"
 database_name = "theo_os_db"
-database_id = "REPLACE_AFTER_CREATION"
+database_id = "2501e619-c84d-44ab-acac-c2564fbad1aa"
 
 [[kv_namespaces]]
 binding = "THEO_OS_KV"
-id = "REPLACE_AFTER_CREATION"
+id = "f5de0039149c4717941a9e2e75bfd7f2"
 
 [vars]
 ENVIRONMENT = "production"

@@ -57,7 +57,7 @@ CREATE TABLE IF NOT EXISTS life_vision (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   area TEXT NOT NULL UNIQUE,
   vision TEXT,
-  values TEXT,
+  "values" TEXT,
   current_phase TEXT,
   success_definition TEXT,
   updated_at TEXT DEFAULT (datetime('now'))
