@@ -64,22 +64,26 @@ async function runMorningBriefing(env) {
   }
 
   // D1: overdue tasks and tasks due today
-  const [overdueRes, dueTodayRes, activeGoalsRes] = await Promise.all([
-    env.THEO_OS_DB.prepare(
-      `SELECT title, area FROM tasks WHERE status != 'done' AND due_date IS NOT NULL AND due_date < ?`
-    ).bind(today).all(),
-    env.THEO_OS_DB.prepare(
-      `SELECT title, area FROM tasks WHERE status = 'today' OR (status != 'done' AND due_date = ?)`
-    ).bind(today).all(),
-    env.THEO_OS_DB.prepare(
-      `SELECT area, COUNT(*) as count FROM goals WHERE status = 'active' GROUP BY area`
-    ).all(),
-  ]);
-
-  const overdueTasks = overdueRes.results || [];
-  const dueTodayTasks = dueTodayRes.results || [];
-  const activeGoals = activeGoalsRes.results || [];
-  const activeGoalsCount = activeGoals.reduce((sum, r) => sum + r.count, 0);
+  let overdueTasks = [], dueTodayTasks = [], activeGoalsCount = 0;
+  try {
+    const [overdueRes, dueTodayRes, activeGoalsRes] = await Promise.all([
+      env.THEO_OS_DB.prepare(
+        `SELECT title, area FROM tasks WHERE status != 'done' AND due_date IS NOT NULL AND due_date < ?`
+      ).bind(today).all(),
+      env.THEO_OS_DB.prepare(
+        `SELECT title, area FROM tasks WHERE status = 'today' OR (status != 'done' AND due_date = ?)`
+      ).bind(today).all(),
+      env.THEO_OS_DB.prepare(
+        `SELECT area, COUNT(*) as count FROM goals WHERE status = 'active' GROUP BY area`
+      ).all(),
+    ]);
+    overdueTasks = overdueRes.results || [];
+    dueTodayTasks = dueTodayRes.results || [];
+    const activeGoals = activeGoalsRes.results || [];
+    activeGoalsCount = activeGoals.reduce((sum, r) => sum + r.count, 0);
+  } catch {
+    // D1 unavailable — proceed with empty context
+  }
 
   // Build Anthropic prompt
   const calendarText = calendarEvents.length > 0
@@ -152,38 +156,43 @@ async function runWeeklyInsights(env) {
 
   const today = new Date().toISOString().split('T')[0];
 
-  // Area activity last 14 days
-  const { results: areaActivity } = await env.THEO_OS_DB.prepare(`
-    SELECT area, MAX(last_active) as last_active FROM (
-      SELECT area, MAX(updated_at) as last_active FROM tasks
-        WHERE updated_at >= datetime('now', '-14 days') GROUP BY area
-      UNION ALL
-      SELECT area, MAX(updated_at) as last_active FROM goals
-        WHERE updated_at >= datetime('now', '-14 days') GROUP BY area
-    ) GROUP BY area
-  `).all();
+  // D1 queries — degrade gracefully if DB unavailable
+  let areaActivity = [], overduePeople = [], staleGoals = [], staleCollectionsCount = 0;
+  try {
+    const [areaRes, peopleRes, goalsRes] = await Promise.all([
+      env.THEO_OS_DB.prepare(`
+        SELECT area, MAX(last_active) as last_active FROM (
+          SELECT area, MAX(updated_at) as last_active FROM tasks
+            WHERE updated_at >= datetime('now', '-14 days') GROUP BY area
+          UNION ALL
+          SELECT area, MAX(updated_at) as last_active FROM goals
+            WHERE updated_at >= datetime('now', '-14 days') GROUP BY area
+        ) GROUP BY area
+      `).all(),
+      env.THEO_OS_DB.prepare(
+        `SELECT name, relationship, next_touchpoint FROM people WHERE next_touchpoint IS NOT NULL AND next_touchpoint <= ?`
+      ).bind(today).all(),
+      env.THEO_OS_DB.prepare(`
+        SELECT g.title, g.area FROM goals g
+        WHERE g.status = 'active'
+        AND NOT EXISTS (
+          SELECT 1 FROM tasks t
+          WHERE t.goal_id = g.id AND t.updated_at >= datetime('now', '-30 days')
+        )
+      `).all(),
+    ]);
+    areaActivity = areaRes.results || [];
+    overduePeople = peopleRes.results || [];
+    staleGoals = goalsRes.results || [];
 
-  // People overdue for contact
-  const { results: overduePeople } = await env.THEO_OS_DB.prepare(
-    `SELECT name, relationship, next_touchpoint FROM people WHERE next_touchpoint IS NOT NULL AND next_touchpoint <= ?`
-  ).bind(today).all();
-
-  // Goals with no task activity in 30 days
-  const { results: staleGoals } = await env.THEO_OS_DB.prepare(`
-    SELECT g.title, g.area FROM goals g
-    WHERE g.status = 'active'
-    AND NOT EXISTS (
-      SELECT 1 FROM tasks t
-      WHERE t.goal_id = g.id AND t.updated_at >= datetime('now', '-30 days')
-    )
-  `).all();
-
-  // Collections: want items added more than 30 days ago still with status 'want'
-  const staleCollectionsRes = await env.THEO_OS_DB.prepare(`
-    SELECT COUNT(*) as count FROM collections
-    WHERE status = 'want' AND created_at <= datetime('now', '-30 days')
-  `).first();
-  const staleCollectionsCount = staleCollectionsRes?.count || 0;
+    const staleCollRes = await env.THEO_OS_DB.prepare(`
+      SELECT COUNT(*) as count FROM collections
+      WHERE status = 'want' AND created_at <= datetime('now', '-30 days')
+    `).first();
+    staleCollectionsCount = staleCollRes?.count || 0;
+  } catch {
+    // D1 unavailable — proceed with empty context
+  }
 
   // Build Anthropic prompt
   const areaActivityText = areaActivity.length > 0
@@ -258,7 +267,7 @@ where type is one of: drift, decay, pattern, relationship`;
   }
 
   // Update last run timestamp
-  await env.THEO_OS_KV.put('insights:last_run', today);
+  await env.THEO_OS_KV.put('insights:last_run', new Date().toISOString());
 }
 
 export default {
