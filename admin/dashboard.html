@@ -412,7 +412,7 @@
         } else {
           dotClass = 'inactive';
         }
-        subText = fmtDate(lastActive) || subText;
+        subText = `Last active ${fmtDate(lastActive)}` || subText;
       }
 
       return `<div class="stat-card">
