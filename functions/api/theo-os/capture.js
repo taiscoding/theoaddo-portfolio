@@ -48,7 +48,10 @@ export async function onRequestPost({ request, env }) {
     ? `Original: ${resolvedText}\nClarification: ${clarification}`
     : resolvedText;
 
+  const today = new Date().toISOString().split('T')[0];
   const system = `${ROUTE_SYSTEM}
+
+Today's date: ${today}
 
 Known context about Theo:
 - Facts: ${memory.facts}
