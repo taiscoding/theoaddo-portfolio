@@ -448,7 +448,7 @@
       hideThinking();
 
       if (!data || !data.message) {
-        appendMessage('assistant', 'Something went wrong. Try again.', 0);
+        appendMessage('assistant', `Something went wrong: ${apiPost._lastError || 'unknown error'}`, 0);
         return;
       }
 
