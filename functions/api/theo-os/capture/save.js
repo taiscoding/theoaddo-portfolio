@@ -101,7 +101,8 @@ export async function onRequestPost({ request, env }) {
         return err(`Unknown type: ${type}`, 400);
       }
     } catch (e) {
-      return err('Failed to save record', 500);
+      const msg = e?.cause?.message || e?.message || String(e);
+      return err(`Failed to save record: ${msg}`, 500);
     }
   }
 

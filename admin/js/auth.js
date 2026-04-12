@@ -86,7 +86,11 @@ async function apiPost(path, body) {
     method: 'POST', headers: authHeaders(), body: JSON.stringify(body)
   });
   if (res.status === 401) { clearToken(); window.location.href = '/admin/index.html'; return null; }
-  if (!res.ok) return null;
+  if (!res.ok) {
+    try { apiPost._lastError = (await res.json()).error; } catch { apiPost._lastError = `HTTP ${res.status}`; }
+    return null;
+  }
+  apiPost._lastError = null;
   return res.json();
 }
 

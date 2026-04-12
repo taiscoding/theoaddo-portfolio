@@ -501,7 +501,7 @@
       people_ids: (e?.people || r.mentioned_people || []).map(p => p.id).filter(Boolean),
       original_text: captureState.originalText
     });
-    if (!result) { alert('Failed to save — try again'); return; }
+    if (!result) { alert(`Failed to save: ${apiPost._lastError || 'unknown error'}`); return; }
     showDone(result.confirmation || `${r.type} saved`);
     loadRecent();
   };
