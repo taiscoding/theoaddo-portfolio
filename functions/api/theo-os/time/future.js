@@ -8,6 +8,7 @@ function buildPaths(tasks, goals) {
     const a = goal.area || 'life';
     if (!areas[a]) areas[a] = { area: a, goal: null, tasks: [], weight: 0, people: [] };
     areas[a].goal = goal;
+    // Only the highest-weight goal per area is kept (goals are sorted by weight DESC)
     areas[a].weight += goal.weight || 1;
   }
 
@@ -43,7 +44,7 @@ export async function onRequestGet({ request, env }) {
   if (!await requireAdmin(request, env)) return err('Unauthorized', 401);
 
   try {
-    // Open tasks with due dates or high weight
+    // Open tasks, sorted by weight then due date
     const { results: tasks } = await env.THEO_OS_DB.prepare(
       `SELECT id, title, area, due_date, weight, notes
        FROM tasks WHERE status != 'done'
@@ -63,8 +64,9 @@ export async function onRequestGet({ request, env }) {
     const paths = buildPaths(annotatedTasks, annotatedGoals);
 
     // Check for anything due in 48 hours (for nav dot)
+    const now = Date.now();
     const soon = annotatedTasks.some(t =>
-      t.due_date && new Date(t.due_date) - new Date() < 48 * 3600000 && new Date(t.due_date) > new Date()
+      t.due_date && new Date(t.due_date).getTime() - now < 48 * 3600000 && new Date(t.due_date).getTime() > now
     );
 
     return json({ paths, nav_dot: soon ? 'amber' : 'green' });
