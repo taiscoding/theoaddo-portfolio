@@ -260,7 +260,7 @@ async function callAnthropic(messages, systemPrompt, tools, env) {
 
 // ---- Build system prompt ----
 
-async function buildSystemPrompt(env) {
+async function buildSystemPrompt(env, clientTime, timezone) {
   // Load life vision summary
   let life_vision_summary = 'No life vision data available.';
   try {
@@ -333,13 +333,15 @@ Due topics:
 ${knowledge_due}`
     : '';
 
-  const now = new Date();
-  const todayStr = now.toISOString().split('T')[0];
-  const dayName = now.toLocaleDateString('en-US', { weekday: 'long', timeZone: 'America/New_York' });
+  // Use client-supplied time and timezone (travels with user), fall back to UTC
+  const tz = timezone || 'UTC';
+  const now = clientTime ? new Date(clientTime) : new Date();
+  const dateStr = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: tz });
+  const timeStr = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: tz });
 
   return `You are Theo's secretary and thinking partner. You have full access to his life OS data.
 
-Today is ${dayName}, ${todayStr}.
+Current time: ${timeStr} on ${dateStr} (${tz}).
 
 Your role has two modes:
 
@@ -514,13 +516,13 @@ export async function onRequestPost(context) {
   let body;
   try { body = await request.json(); } catch { return err('Invalid JSON'); }
 
-  const { message, session_id, history } = body;
+  const { message, session_id, history, client_time, timezone } = body;
 
   if (!message || !String(message).trim()) return err('message is required');
 
   let systemPrompt;
   try {
-    systemPrompt = await buildSystemPrompt(env);
+    systemPrompt = await buildSystemPrompt(env, client_time, timezone);
   } catch (e) {
     return err(`Failed to build system prompt: ${e.message}`, 500);
   }

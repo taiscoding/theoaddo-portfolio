@@ -439,7 +439,9 @@
       const data = await apiPost('/api/theo-os/chat/message', {
         message,
         session_id: SESSION_ID,
-        history: history.slice(-20).slice(0, -1) // send all except the just-added user message
+        history: history.slice(-20).slice(0, -1), // send all except the just-added user message
+        client_time: new Date().toISOString(),
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
       });
 
       hideThinking();
