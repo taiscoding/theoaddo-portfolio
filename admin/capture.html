@@ -281,6 +281,7 @@
       <!-- Stage: done -->
       <div class="capture-stage" id="stage-done">
         <div style="padding:16px 0;font-size:14px;color:var(--teal)" id="done-msg"></div>
+        <a id="chat-followup-btn" href="#" style="display:none;margin-top:4px;padding:8px 16px;background:var(--teal-subtle);color:var(--teal);border:1px solid var(--teal);border-radius:6px;font-size:13px;font-weight:600;text-decoration:none;font-family:var(--font-display)">Continue in Chat</a>
       </div>
     </div>
 
@@ -511,15 +512,33 @@
       original_text: captureState.originalText
     };
     const result = await apiPost('/api/theo-os/capture/save', payload);
-    if (!result) { alert(`Failed to save: ${apiPost._lastError || 'unknown error'}\n\nPayload: ${JSON.stringify(payload)}`); return; }
-    showDone(result.confirmation || `${r.type} saved`);
+    if (!result) { alert(`Failed to save — try again`); return; }
+    const chatCtx = isActionOriented(captureState.selectedChip)
+      ? `I just captured: "${captureState.originalText}"${captureState.selectedChip ? ` and I want to: ${captureState.selectedChip}` : ''}. Help me think through this.`
+      : null;
+    showDone(result.confirmation || `${r.type} saved`, chatCtx);
     loadRecent();
   };
 
-  function showDone(msg) {
+  function showDone(msg, chatContext = null) {
     document.getElementById('done-msg').textContent = `✓ ${msg}`;
+    const chatBtn = document.getElementById('chat-followup-btn');
+    if (chatContext) {
+      chatBtn.href = `/admin/chat.html?context=${encodeURIComponent(chatContext)}`;
+      chatBtn.style.display = 'inline-block';
+    } else {
+      chatBtn.style.display = 'none';
+    }
     setStage('done');
-    setTimeout(resetCapture, 2000);
+    // Only auto-reset if not offering chat handoff
+    if (!chatContext) setTimeout(resetCapture, 2000);
+  }
+
+  // Detect if a clarification chip implies action (strategy, plan, help, both)
+  function isActionOriented(chip) {
+    if (!chip) return false;
+    const lower = chip.toLowerCase();
+    return ['strategy', 'plan', 'help', 'both', 'build', 'advice', 'system', 'goal'].some(w => lower.includes(w));
   }
 
   // Entry point

@@ -43,7 +43,7 @@ Return { "memory": null } if nothing worth remembering.`,
 
     if (parsed.memory) {
       await env.THEO_OS_DB.prepare(
-        'INSERT INTO memories (type, content, weight, emotional_score) VALUES (?, ?, 1.0, 0.0)'
+        'INSERT INTO memories (type, content, confidence, source, weight, emotional_score) VALUES (?, ?, 0.7, "capture", 1.0, 0.0)'
       ).bind(parsed.type || 'fact', parsed.memory).run();
     }
   } catch { /* silent — memory extraction never blocks save */ }

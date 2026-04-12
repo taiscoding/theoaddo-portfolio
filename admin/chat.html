@@ -496,11 +496,21 @@
     }
   });
 
-  // ---- Init: show welcome message ----
+  // ---- Init: show welcome message, handle context from capture ----
   function init() {
-    const welcomeText = `${getGreeting()} What's on your mind?`;
-    appendMessage('assistant', welcomeText, 0);
-    chatInput.focus();
+    const params = new URLSearchParams(location.search);
+    const context = params.get('context');
+    if (context) {
+      // Came from capture with action intent — skip welcome, pre-load and send
+      history.replaceState({}, '', location.pathname);
+      chatInput.value = context;
+      autoExpand(chatInput);
+      sendMessage();
+    } else {
+      const welcomeText = `${getGreeting()} What's on your mind?`;
+      appendMessage('assistant', welcomeText, 0);
+      chatInput.focus();
+    }
   }
 
   init();
