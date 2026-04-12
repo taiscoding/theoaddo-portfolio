@@ -333,7 +333,13 @@ Due topics:
 ${knowledge_due}`
     : '';
 
+  const now = new Date();
+  const todayStr = now.toISOString().split('T')[0];
+  const dayName = now.toLocaleDateString('en-US', { weekday: 'long', timeZone: 'America/New_York' });
+
   return `You are Theo's secretary and thinking partner. You have full access to his life OS data.
+
+Today is ${dayName}, ${todayStr}.
 
 Your role has two modes:
 
