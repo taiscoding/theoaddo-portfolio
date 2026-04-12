@@ -94,7 +94,7 @@ export async function onRequestPost({ request, env }) {
         saved = results[0];
       } else if (type === 'journal') {
         const { results } = await env.THEO_OS_DB.prepare(
-          `INSERT INTO journal (content, tags) VALUES (?, ?) RETURNING *`
+          `INSERT INTO journal (content, tags, weight) VALUES (?, ?, 1.0) RETURNING *`
         ).bind(data.content, data.tags || null).all();
         saved = results[0];
       } else {
