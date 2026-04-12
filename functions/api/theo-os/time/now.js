@@ -39,6 +39,14 @@ export async function onRequestGet({ request, env, ctx }) {
        ORDER BY next_touchpoint ASC LIMIT 5`
     ).all();
     peopleLines = people.map(p => `- ${p.name} (touchpoint ${p.next_touchpoint})`).join('\n');
+
+    // Pull most recent journal entry for emotional/thought context
+    const { results: journal } = await env.THEO_OS_DB.prepare(
+      `SELECT content, created_at FROM journal ORDER BY created_at DESC LIMIT 1`
+    ).all();
+    if (journal[0]) {
+      taskLines += `\n\nMost recent journal (${journal[0].created_at?.split('T')[0]}):\n${journal[0].content?.slice(0, 200)}`;
+    }
   } catch (e) { console.warn('[time/now] DB context error:', e?.message); }
 
   const memory = await loadMemoryContext(env);
@@ -55,10 +63,10 @@ export async function onRequestGet({ request, env, ctx }) {
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
         max_tokens: 200,
-        system: `${NOW_SYSTEM}\n\nUser context:\nFacts: ${memory.facts}\nPatterns: ${memory.patterns}`,
+        system: `${NOW_SYSTEM}\n\nKnown patterns: ${memory.patterns}\nKnown facts: ${memory.facts}`,
         messages: [{
           role: 'user',
-          content: `Open tasks:\n${taskLines || 'none'}\n\nGoals:\n${goalLines || 'none'}\n\nUpcoming touchpoints:\n${peopleLines || 'none'}`
+          content: `Open tasks:\n${taskLines || 'none'}\n\nGoals:\n${goalLines || 'none'}\n\nUpcoming touchpoints:\n${peopleLines || 'none'}\n\nLook across all of this. What actually connects? What matters right now?`
         }]
       })
     });
