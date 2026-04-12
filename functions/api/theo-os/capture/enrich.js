@@ -23,12 +23,14 @@ export async function onRequestPost({ request, env }) {
   const body = await request.json().catch(() => ({}));
   const { type, data, mentioned_people } = body;
 
-  if (!type || !data?.title) return err('type and data.title required');
+  if (!type) return err('type required');
 
   // Only enrich collections and goals
   if (!['collection', 'goal'].includes(type)) {
     return json({ enriched: data, people: mentioned_people || [] });
   }
+
+  if (!data?.title) return err('data.title required for enrichment');
 
   // Tavily search
   let searchResults = '';

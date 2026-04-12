@@ -7,7 +7,7 @@ Parse a natural-language capture and route it. Respond with JSON ONLY (no markdo
   "confidence": 0.0-1.0,
   "needs_clarification": true|false,
   "question": "short targeted question if needs_clarification is true, else null",
-  "answer_chips": ["Option A", "Option B"] or null,
+  "answer_chips": ["Option A", "Option B"] or ["Option A", "Option B", "Option C"] or null,
   "type": "task" | "goal" | "person" | "collection" | "journal",
   "data": { ...type-specific fields },
   "emotional_score": 0.0-1.0
@@ -23,7 +23,7 @@ Field specs by type:
 Confidence rules:
 - 0.9+: clearly one type, all key fields obvious
 - 0.7-0.89: likely correct but one field ambiguous
-- below 0.7: set needs_clarification=true, provide question + 2 answer_chips
+- below 0.7: set needs_clarification=true, provide question + 2-3 answer_chips (use 3 only when there are genuinely 3 distinct candidate types)
 
 Clarification fires ONLY for type ambiguity or enrichment target ambiguity (e.g. "The Odyssey" — film or book?).
 Never ask about missing optional fields. Make your best guess on those.

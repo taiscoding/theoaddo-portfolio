@@ -158,3 +158,14 @@ CREATE INDEX IF NOT EXISTS idx_connections_from ON connections(from_type, from_i
 CREATE INDEX IF NOT EXISTS idx_connections_to ON connections(to_type, to_id);
 CREATE INDEX IF NOT EXISTS idx_people_next_touchpoint ON people(next_touchpoint);
 CREATE INDEX IF NOT EXISTS idx_email_drafts_status ON email_drafts(status);
+
+-- Migration: add weight/aliases/emotional_score/strength columns used by capture save/dedup
+ALTER TABLE tasks ADD COLUMN weight REAL DEFAULT 1.0;
+ALTER TABLE goals ADD COLUMN weight REAL DEFAULT 1.0;
+ALTER TABLE people ADD COLUMN weight REAL DEFAULT 1.0;
+ALTER TABLE people ADD COLUMN aliases TEXT DEFAULT '[]';
+ALTER TABLE collections ADD COLUMN weight REAL DEFAULT 1.0;
+ALTER TABLE journal ADD COLUMN weight REAL DEFAULT 1.0;
+ALTER TABLE memories ADD COLUMN weight REAL DEFAULT 1.0;
+ALTER TABLE memories ADD COLUMN emotional_score REAL DEFAULT 0.0;
+ALTER TABLE connections ADD COLUMN strength REAL DEFAULT 1.0;
