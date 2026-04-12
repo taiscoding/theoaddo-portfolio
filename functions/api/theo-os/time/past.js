@@ -4,22 +4,19 @@ export async function onRequestGet({ request, env }) {
   if (!await requireAdmin(request, env)) return err('Unauthorized', 401);
 
   const url = new URL(request.url);
-  const days = parseInt(url.searchParams.get('days') || '30', 10);
+  const days = Math.min(Math.max(parseInt(url.searchParams.get('days') || '30', 10) || 30, 1), 730);
   const area = url.searchParams.get('area') || null;
   const person_id = url.searchParams.get('person_id') || null;
 
   const cutoff = new Date(Date.now() - days * 86400000).toISOString();
 
   try {
-    // Journal entries — area filter applied when provided
-    const journalSql = area
-      ? `SELECT 'journal' as source_type, id, content as title, NULL as notes, created_at, NULL as area, weight
-         FROM journal WHERE created_at >= ? AND area = ? ORDER BY created_at DESC LIMIT 50`
-      : `SELECT 'journal' as source_type, id, content as title, NULL as notes, created_at, NULL as area, weight
+    // Journal entries — no area filter (journal table has no area column)
+    const journalSql = `SELECT 'journal' as source_type, id, content as title, NULL as notes, created_at, NULL as area, weight
          FROM journal WHERE created_at >= ? ORDER BY created_at DESC LIMIT 50`;
 
     const { results: journalEntries } = await env.THEO_OS_DB.prepare(journalSql)
-      .bind(...(area ? [cutoff, area] : [cutoff])).all();
+      .bind(cutoff).all();
 
     // Completed tasks
     const taskSql = area
@@ -37,7 +34,7 @@ export async function onRequestGet({ request, env }) {
     let touchpoints = [];
     if (person_id) {
       const { results } = await env.THEO_OS_DB.prepare(
-        `SELECT 'person' as source_type, p.id, p.name as title, p.notes, p.updated_at as created_at, NULL as area, p.weight
+        `SELECT DISTINCT 'person' as source_type, p.id, p.name as title, p.notes, p.updated_at as created_at, NULL as area, p.weight
          FROM people p
          JOIN connections c ON (c.to_type = 'person' AND c.to_id = p.id)
          WHERE p.id = ? AND p.updated_at >= ?
