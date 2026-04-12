@@ -325,13 +325,14 @@
 
   function fmtDate(iso) {
     if (!iso) return null;
-    const [y, m, d] = iso.split('T')[0].split('-').map(Number);
+    const dateStr = iso.split('T')[0].split(' ')[0];
+    const [y, m, d] = dateStr.split('-').map(Number);
     return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   }
 
   function daysBetween(isoA, isoB) {
-    const a = new Date(isoA.split('T')[0]);
-    const b = new Date(isoB.split('T')[0]);
+    const a = new Date(isoA.split('T')[0].split(' ')[0]);
+    const b = new Date(isoB.split('T')[0].split(' ')[0]);
     return Math.round((b - a) / 86400000);
   }
 
