@@ -108,6 +108,7 @@
       from { opacity: 0; transform: translateY(-4px); }
       to   { opacity: 1; transform: translateY(0); }
     }
+    @keyframes spin { to { transform: rotate(360deg); } }
     .recent-badge {
       display: inline-block;
       font-family: var(--font-mono);
@@ -263,6 +264,7 @@
       <!-- Stage: enriching -->
       <div class="capture-stage" id="stage-enriching">
         <div style="display:flex;align-items:center;gap:12px;padding:16px 0;color:var(--text-tertiary);font-size:13px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="animation:spin 1s linear infinite;flex-shrink:0"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
           <span id="enriching-label">Looking it up...</span>
         </div>
       </div>
@@ -429,8 +431,9 @@
   }
 
   document.getElementById('clarify-submit-btn').onclick = async () => {
-    const clarification = captureState.selectedChip || '';
-    if (!clarification) return;
+    // Use selected chip if available; otherwise proceed without clarification
+    // (handles edge case where answer_chips is empty — never dead-end the user)
+    const clarification = captureState.selectedChip || null;
     await doRoute(captureState.originalText, clarification);
   };
 
