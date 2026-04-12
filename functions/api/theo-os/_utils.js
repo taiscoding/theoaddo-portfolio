@@ -144,3 +144,44 @@ export async function loadMemoryContext(env) {
     return { facts: 'none', patterns: 'none', preferences: 'none' };
   }
 }
+
+// Resolve known person aliases in capture text before routing
+// Returns { resolvedText, mentionedPeople: [{id, name}] }
+export async function resolveAliases(text, env) {
+  try {
+    const { results: people } = await env.THEO_OS_DB.prepare(
+      'SELECT id, name, aliases FROM people'
+    ).all();
+
+    const mentioned = [];
+    let resolved = text;
+
+    for (const person of people) {
+      // Always check canonical name
+      const namesToCheck = [person.name];
+
+      // Parse aliases JSON array
+      try {
+        const aliases = JSON.parse(person.aliases || '[]');
+        namesToCheck.push(...aliases);
+      } catch { /* ignore malformed aliases */ }
+
+      for (const alias of namesToCheck) {
+        if (!alias) continue;
+        const regex = new RegExp(`\\b${alias.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi');
+        if (regex.test(resolved)) {
+          // Replace with canonical name annotated with ID for AI context
+          resolved = resolved.replace(regex, `${person.name}[person:${person.id}]`);
+          if (!mentioned.find(m => m.id === person.id)) {
+            mentioned.push({ id: person.id, name: person.name });
+          }
+          break; // Found for this person, move on
+        }
+      }
+    }
+
+    return { resolvedText: resolved, mentionedPeople: mentioned };
+  } catch {
+    return { resolvedText: text, mentionedPeople: [] };
+  }
+}
