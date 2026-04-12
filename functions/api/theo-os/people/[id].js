@@ -61,6 +61,7 @@ export async function onRequestPatch({ request, env, params }) {
     'SELECT * FROM people WHERE id = ?'
   ).bind(id).first();
 
+  env.THEO_OS_KV.delete('time:now:digest').catch(() => null);
   return json({ ...person, health: computeHealth(person) });
 }
 
@@ -77,5 +78,6 @@ export async function onRequestDelete({ request, env, params }) {
 
   await env.THEO_OS_DB.prepare('DELETE FROM people WHERE id = ?').bind(id).run();
 
+  env.THEO_OS_KV.delete('time:now:digest').catch(() => null);
   return json({ ok: true });
 }

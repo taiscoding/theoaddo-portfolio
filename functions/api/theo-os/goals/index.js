@@ -63,5 +63,6 @@ export async function onRequestPost({ request, env }) {
     target_date || null
   ).all();
 
+  env.THEO_OS_KV.delete('time:now:digest').catch(() => null);
   return json(results[0], 201);
 }

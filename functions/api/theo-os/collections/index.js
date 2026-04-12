@@ -59,5 +59,6 @@ export async function onRequestPost({ request, env }) {
     itemStatus
   ).all();
 
+  env.THEO_OS_KV.delete('time:now:digest').catch(() => null);
   return json(results[0], 201);
 }

@@ -48,6 +48,7 @@ export async function onRequestPatch({ request, env, params }) {
     'SELECT * FROM goals WHERE id = ?'
   ).bind(id).first();
 
+  env.THEO_OS_KV.delete('time:now:digest').catch(() => null);
   return json(goal);
 }
 
@@ -65,5 +66,6 @@ export async function onRequestDelete({ request, env, params }) {
   await env.THEO_OS_DB.prepare('DELETE FROM milestones WHERE goal_id = ?').bind(id).run();
   await env.THEO_OS_DB.prepare('DELETE FROM goals WHERE id = ?').bind(id).run();
 
+  env.THEO_OS_KV.delete('time:now:digest').catch(() => null);
   return json({ ok: true });
 }

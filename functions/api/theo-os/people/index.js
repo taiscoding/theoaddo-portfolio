@@ -49,5 +49,6 @@ export async function onRequestPost({ request, env }) {
   ).all();
 
   const person = results[0];
+  env.THEO_OS_KV.delete('time:now:digest').catch(() => null);
   return json({ ...person, health: computeHealth(person) }, 201);
 }

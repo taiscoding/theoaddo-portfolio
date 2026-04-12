@@ -54,6 +54,7 @@ export async function onRequestPatch({ request, env, params }) {
     'SELECT * FROM journal WHERE id = ?'
   ).bind(id).first();
 
+  env.THEO_OS_KV.delete('time:now:digest').catch(() => null);
   return json(entry);
 }
 
@@ -70,5 +71,6 @@ export async function onRequestDelete({ request, env, params }) {
 
   await env.THEO_OS_DB.prepare('DELETE FROM journal WHERE id = ?').bind(id).run();
 
+  env.THEO_OS_KV.delete('time:now:digest').catch(() => null);
   return json({ ok: true });
 }

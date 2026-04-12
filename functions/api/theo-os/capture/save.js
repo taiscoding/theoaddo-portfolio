@@ -134,5 +134,6 @@ export async function onRequestPost({ request, env }) {
   // Fire background memory extraction (don't await — never blocks save)
   extractMemory(env, type, data, original_text, peopleNames).catch(() => null);
 
+  env.THEO_OS_KV.delete('time:now:digest').catch(() => null);
   return json({ type, saved, confirmation: `${type} saved` });
 }
