@@ -1,5 +1,24 @@
 import { json, err, requireAdmin, getGoogleToken } from '../_utils.js';
 
+// Walk Gmail's MIME tree to find the first text/plain part and decode it
+function extractBody(payload, maxChars = 600) {
+  if (!payload) return '';
+
+  // Simple message — body directly on payload
+  if (payload.mimeType === 'text/plain' && payload.body?.data) {
+    const raw = payload.body.data.replace(/-/g, '+').replace(/_/g, '/');
+    try { return atob(raw).slice(0, maxChars); } catch { return ''; }
+  }
+
+  // Multipart — recurse into parts
+  for (const part of (payload.parts || [])) {
+    const found = extractBody(part, maxChars);
+    if (found) return found;
+  }
+
+  return '';
+}
+
 export async function onRequestPost({ request, env }) {
   if (!await requireAdmin(request, env)) return err('Unauthorized', 401);
 
@@ -19,40 +38,42 @@ export async function onRequestPost({ request, env }) {
   const messages = listData.messages || [];
   if (messages.length === 0) return json({ staged: 0 });
 
-  // Fetch metadata for each message in parallel — filter out any failures
-  const metaResults = (await Promise.all(
+  // Fetch full message (body + headers) for each message in parallel
+  const fullResults = (await Promise.all(
     messages.map(m =>
       fetch(
-        `https://gmail.googleapis.com/gmail/v1/users/me/messages/${m.id}?format=metadata&metadataHeaders=Subject&metadataHeaders=From`,
+        `https://gmail.googleapis.com/gmail/v1/users/me/messages/${m.id}?format=full`,
         { headers: { Authorization: `Bearer ${token}` } }
       ).then(r => r.ok ? r.json() : null).catch(() => null)
     )
   )).filter(Boolean);
 
-  // Extract fields from metadata
-  const emails = metaResults.map((msg, i) => {
+  // Extract fields including decoded body
+  const emails = fullResults.map((msg, i) => {
     const headers = msg.payload?.headers || [];
     const subject = headers.find(h => h.name === 'Subject')?.value || '(no subject)';
     const fromRaw = headers.find(h => h.name === 'From')?.value || '';
     const match = fromRaw.match(/^(.*?)\s*<(.+)>$/);
     const fromName = match ? match[1].trim().replace(/^"|"$/g, '') : fromRaw;
     const fromAddress = match ? match[2].trim() : fromRaw;
+    const body = extractBody(msg.payload);
     return {
       index: i,
       threadId: msg.threadId || msg.id,
       subject,
       fromName,
       fromAddress,
-      snippet: msg.snippet || ''
+      snippet: msg.snippet || '',
+      body
     };
   });
 
-  // Single Anthropic call to triage all emails
+  // Single Anthropic call to triage all emails — now with body content
   const aiPayload = emails.map(e => ({
     index: e.index,
     subject: e.subject,
     from: e.fromName ? `${e.fromName} <${e.fromAddress}>` : e.fromAddress,
-    snippet: e.snippet
+    body: e.body || e.snippet  // body if available, fall back to snippet
   }));
 
   const aiRes = await fetch('https://api.anthropic.com/v1/messages', {
@@ -67,9 +88,11 @@ export async function onRequestPost({ request, env }) {
       max_tokens: 4096,
       messages: [{
         role: 'user',
-        content: `You are an email assistant. For each email below, provide:
-1. urgency: "high", "medium", or "low"
-2. draft: a concise, professional reply draft (2-4 sentences)
+        content: `You are triaging emails for Theo. For each email, read the body content and provide:
+1. urgency: "high" (needs action today), "medium" (worth reading), or "low" (newsletter/promo/automated)
+2. draft: a concise, direct reply draft if a reply is warranted — 2-3 sentences. If no reply is needed (newsletter, receipt, notification), return an empty string.
+
+Base urgency on what the email actually says, not just the subject line.
 
 Emails:
 ${JSON.stringify(aiPayload, null, 2)}
