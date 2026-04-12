@@ -15,6 +15,7 @@ const TOOLS = [
     }
   },
   {
+    name: 'get_life_summary',
     description: "Get a full picture of Theo's life: task counts by area/status, goal counts by area, active goals, upcoming tasks, area health.",
     input_schema: { type: 'object', properties: {} }
   },
