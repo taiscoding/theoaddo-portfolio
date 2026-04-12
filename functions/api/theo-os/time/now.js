@@ -9,7 +9,7 @@ that feel like a trusted friend catching you up on what actually matters right n
 Not a list — a paragraph. Calm, honest, direct. No alarm language.
 Return plain text only, no JSON, no markdown.`;
 
-export async function onRequestGet({ request, env }) {
+export async function onRequestGet({ request, env, ctx }) {
   if (!await requireAdmin(request, env)) return err('Unauthorized', 401);
 
   const url = new URL(request.url);
@@ -43,7 +43,7 @@ export async function onRequestGet({ request, env }) {
        ORDER BY next_touchpoint ASC LIMIT 5`
     ).all();
     peopleLines = people.map(p => `- ${p.name} (touchpoint ${p.next_touchpoint})`).join('\n');
-  } catch { /* degrade to empty context */ }
+  } catch (e) { console.warn('[time/now] DB context error:', e?.message); }
 
   const memory = await loadMemoryContext(env);
 
@@ -70,14 +70,14 @@ export async function onRequestGet({ request, env }) {
       const data = await res.json();
       digest = data.content?.[0]?.text?.trim() || digest;
     }
-  } catch { /* degrade to default message */ }
+  } catch (e) { console.warn('[time/now] AI call failed:', e?.message); }
 
   const result = { digest, generated_at: new Date().toISOString() };
 
-  // Cache it
-  try {
-    await env.THEO_OS_KV.put(KV_KEY, JSON.stringify(result), { expirationTtl: KV_TTL });
-  } catch { /* non-fatal */ }
+  // Cache it — fire and forget, never blocks response
+  ctx.waitUntil(
+    env.THEO_OS_KV.put(KV_KEY, JSON.stringify(result), { expirationTtl: KV_TTL }).catch(() => null)
+  );
 
   return json(result);
 }
