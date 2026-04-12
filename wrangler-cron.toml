@@ -12,4 +12,4 @@ binding = "THEO_OS_KV"
 id = "f5de0039149c4717941a9e2e75bfd7f2"
 
 [triggers]
-crons = ["0 6 * * *", "0 10 * * 7"]
+crons = ["0 6 * * *", "0 10 * * 7", "0 */3 * * *"]

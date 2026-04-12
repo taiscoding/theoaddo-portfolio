@@ -135,12 +135,18 @@
       </div>
     </div>
 
+    <!-- Pulse — proactive cross-domain notice, only shown when present -->
+    <div id="pulse-bar" style="display:none;background:var(--void-elevated);border:1px solid var(--border-ghost);border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:var(--text-secondary);line-height:1.6;"></div>
+
     <!-- Morning Briefing -->
     <div class="section-label">Morning Briefing</div>
     <div class="briefing-card" id="briefing-card">
       <div class="briefing-header">
         <div class="briefing-title">Briefing Agent</div>
-        <span class="briefing-time" id="briefing-time"></span>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span class="briefing-time" id="briefing-time"></span>
+          <button id="briefing-refresh-btn" title="Regenerate briefing" style="background:none;border:none;cursor:pointer;color:var(--text-tertiary);font-size:14px;padding:2px 4px;border-radius:4px;line-height:1;" onclick="regenerateBriefing()">&#x21BB;</button>
+        </div>
       </div>
       <div id="briefing-body"><span class="briefing-loading">Loading...</span></div>
     </div>
@@ -377,6 +383,26 @@
     }
   }
 
+  async function regenerateBriefing() {
+    const btn = document.getElementById('briefing-refresh-btn');
+    const bodyEl = document.getElementById('briefing-body');
+    const timeEl = document.getElementById('briefing-time');
+    if (btn) { btn.style.opacity = '0.4'; btn.disabled = true; }
+    bodyEl.innerHTML = `<span class="briefing-loading">Regenerating...</span>`;
+    // Delete today's cache via a force-regenerate POST
+    const data = await apiPost('/api/theo-os/briefing?force=1', {});
+    if (data && data.briefing) {
+      bodyEl.innerHTML = `<div class="briefing-body">${renderMd(data.briefing.text)}</div>`;
+      if (data.briefing.generated_at) {
+        const d = new Date(data.briefing.generated_at);
+        timeEl.textContent = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      }
+    } else {
+      bodyEl.innerHTML = `<span class="briefing-loading">Could not regenerate.</span>`;
+    }
+    if (btn) { btn.style.opacity = '1'; btn.disabled = false; }
+  }
+
   function attachGenerateBtn() {
     document.getElementById('generate-btn')?.addEventListener('click', async () => {
       const btn = document.getElementById('generate-btn');
@@ -583,16 +609,24 @@
   // -- Load all --
 
   async function load() {
-    const [stats, briefingData] = await Promise.all([
+    const [stats, briefingData, pulseData] = await Promise.all([
       apiGet('/api/theo-os/stats'),
       apiGet('/api/theo-os/briefing'),
+      apiGet('/api/theo-os/pulse'),
     ]);
+
+    // Pulse — show if present
+    if (pulseData?.pulse?.message) {
+      const bar = document.getElementById('pulse-bar');
+      bar.textContent = pulseData.pulse.message;
+      bar.style.display = 'block';
+    }
 
     // Briefing
     const bodyEl = document.getElementById('briefing-body');
     const timeEl = document.getElementById('briefing-time');
     if (briefingData && briefingData.briefing) {
-      bodyEl.innerHTML = `<div class="briefing-body">${esc(briefingData.briefing.text)}</div>`;
+      bodyEl.innerHTML = `<div class="briefing-body">${renderMd(briefingData.briefing.text)}</div>`;
       if (briefingData.briefing.generated_at) {
         const d = new Date(briefingData.briefing.generated_at);
         timeEl.textContent = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });

@@ -212,6 +212,80 @@ Return JSON array only: [{area, insight, type}] where type is one of: drift, dec
   await env.THEO_OS_KV.put('insights:last_run', new Date().toISOString());
 }
 
+async function runPulse(env) {
+  // Don't pulse more than once every 2 hours
+  const lastPulse = await env.THEO_OS_KV.get('pulse:last_run');
+  if (lastPulse && (Date.now() - new Date(lastPulse).getTime()) < 2 * 3600000) return;
+
+  const today = new Date().toISOString().split('T')[0];
+
+  let overdue = [], goals = [], people = [], journal = [], connections = [];
+  try {
+    const [a, b, c, d, e] = await Promise.all([
+      env.THEO_OS_DB.prepare(`SELECT title, area, due_date FROM tasks WHERE status != 'done' AND due_date IS NOT NULL AND due_date <= date('now', '+2 days') ORDER BY due_date ASC LIMIT 10`).all(),
+      env.THEO_OS_DB.prepare(`SELECT title, area, weight FROM goals ORDER BY weight DESC LIMIT 8`).all(),
+      env.THEO_OS_DB.prepare(`SELECT name, relationship, next_touchpoint FROM people WHERE next_touchpoint IS NOT NULL AND next_touchpoint <= date('now', '+3 days') ORDER BY next_touchpoint ASC LIMIT 5`).all(),
+      env.THEO_OS_DB.prepare(`SELECT content, created_at FROM journal ORDER BY created_at DESC LIMIT 3`).all(),
+      env.THEO_OS_DB.prepare(`
+        SELECT c.from_type, c.to_type,
+          CASE c.from_type WHEN 'task' THEN (SELECT title FROM tasks WHERE id = c.from_id) WHEN 'goal' THEN (SELECT title FROM goals WHERE id = c.from_id) ELSE NULL END as from_label,
+          CASE c.to_type WHEN 'person' THEN (SELECT name FROM people WHERE id = c.to_id) WHEN 'goal' THEN (SELECT title FROM goals WHERE id = c.to_id) ELSE NULL END as to_label
+        FROM connections c ORDER BY c.strength DESC LIMIT 10
+      `).all(),
+    ]);
+    overdue = a.results || [];
+    goals = b.results || [];
+    people = c.results || [];
+    journal = d.results || [];
+    connections = (e.results || []).filter(c => c.from_label && c.to_label);
+  } catch (_) { return; }
+
+  const context = {
+    upcoming_tasks: overdue,
+    top_goals: goals,
+    upcoming_touchpoints: people,
+    recent_journal: journal.map(j => ({ date: j.created_at, entry: j.content?.slice(0, 200) })),
+    connections,
+  };
+
+  const aiRes = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
+    body: JSON.stringify({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 120,
+      messages: [{
+        role: 'user',
+        content: `You are watching Theo's life OS in real time. Here is the current context:
+
+${JSON.stringify(context, null, 2)}
+
+Is there anything worth surfacing right now — a connection you notice, something overdue that ties to something larger, a pattern in the journal entries, a relationship that keeps coming up? If yes, write one sentence. Specific, no filler. If nothing is actually worth surfacing, return null.
+
+Return JSON: {"message": "one sentence or null"}`
+      }]
+    })
+  }).catch(() => null);
+
+  if (!aiRes?.ok) return;
+  const aiData = await aiRes.json().catch(() => null);
+  const raw = aiData?.content?.[0]?.text?.trim();
+  if (!raw) return;
+
+  try {
+    const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
+    const parsed = JSON.parse(cleaned.match(/\{[\s\S]*\}/)?.[0] || cleaned);
+    if (!parsed.message || parsed.message === 'null') return;
+
+    await env.THEO_OS_KV.put('pulse:current', JSON.stringify({
+      message: parsed.message,
+      generated_at: new Date().toISOString(),
+    }), { expirationTtl: 4 * 3600 }); // expires after 4 hours — pulse is only relevant now
+
+    await env.THEO_OS_KV.put('pulse:last_run', new Date().toISOString());
+  } catch (_) {}
+}
+
 async function consolidateMemories(env) {
   // 1. Decay all memories not reinforced in 14+ days (skip manual)
   await env.THEO_OS_DB.prepare(`
@@ -431,6 +505,8 @@ export default {
       ctx.waitUntil(consolidateMemories(env));
       ctx.waitUntil(consolidateKnowledge(env));
       ctx.waitUntil(runConnectionInference(env));
+    } else if (event.cron === '0 */3 * * *') {
+      ctx.waitUntil(runPulse(env));
     }
   }
 };

@@ -8,10 +8,14 @@ export async function onRequestGet({ request, env }) {
   return json({ briefing: null, cached: false });
 }
 
-// Manual trigger — calls the generation logic directly for testing
+// Manual trigger — generates fresh briefing, ?force=1 clears today's cache first
 export async function onRequestPost({ request, env }) {
   if (!await requireAdmin(request, env)) return err('Unauthorized', 401);
   const today = new Date().toISOString().split('T')[0];
+  const url = new URL(request.url);
+  if (url.searchParams.get('force') === '1') {
+    await env.THEO_OS_KV.delete(`briefing:${today}`).catch(() => null);
+  }
 
   const memory = await loadMemoryContext(env);
 
