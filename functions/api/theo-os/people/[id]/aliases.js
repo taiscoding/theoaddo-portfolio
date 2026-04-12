@@ -1,4 +1,4 @@
-import { json, err, requireAdmin } from '../../../_utils.js';
+import { json, err, requireAdmin } from '../../_utils.js';
 
 export async function onRequestGet({ request, env, params }) {
   if (!await requireAdmin(request, env)) return err('Unauthorized', 401);
