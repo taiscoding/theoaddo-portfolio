@@ -424,9 +424,15 @@
     return `${diffDay} days ago`;
   }
 
+  function parseDate(str) {
+    if (!str) return null;
+    // SQLite returns space-separated datetimes; replace space with T for ISO 8601
+    return new Date(String(str).replace(' ', 'T'));
+  }
+
   function formatDayLabel(dateStr) {
-    const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return dateStr || '';
+    const d = parseDate(dateStr);
+    if (!d || isNaN(d.getTime())) return dateStr || '';
     return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
   }
 
@@ -473,7 +479,7 @@
       const url = force ? '/api/theo-os/time/now?force=1' : '/api/theo-os/time/now';
       const data = await apiGet(url);
 
-      nowLoadedAt = new Date();
+      nowLoadedAt = data.generated_at ? parseDate(data.generated_at) : new Date();
       ts.textContent = 'Updated ' + relativeTime(nowLoadedAt);
 
       if (!data || !data.digest) {
@@ -577,7 +583,8 @@
         const bClass = sourceBadgeClass(ep.source_type);
         const dayLabel = formatDayLabel(ep.date || ep.created_at || '');
         const snippet = (ep.title || ep.content || '').slice(0, 120);
-        const relTime = ep.date || ep.created_at ? relativeTime(new Date(ep.date || ep.created_at)) : '';
+        const epDate = parseDate(ep.date || ep.created_at);
+        const relTime = epDate ? relativeTime(epDate) : '';
 
         return `<div class="timeline-item">
           <div class="timeline-left">
@@ -585,7 +592,7 @@
             <span class="timeline-rel">${escapeHTML(relTime)}</span>
           </div>
           <div class="timeline-right">
-            <span class="source-badge ${bClass}">${escapeHTML(ep.source_type || 'entry')}</span>
+            <span class="source-badge ${bClass}">${escapeHTML(capitalize(ep.source_type || 'entry'))}</span>
             <div class="timeline-content">${escapeHTML(snippet)}</div>
           </div>
         </div>`;
