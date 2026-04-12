@@ -2,23 +2,35 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Chat — Theo OS</title>
   <link rel="icon" href="/favicon.png">
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/admin/css/admin.css?v=5">
   <script>document.documentElement.setAttribute('data-theme', localStorage.getItem('theo_os_theme') || 'dark')</script>
   <style>
+    /* Prevent body-level scrolling on the chat page */
+    html, body {
+      height: 100%;
+      overflow: hidden;
+    }
+
+    .shell {
+      height: 100%;
+      min-height: 0; /* override admin.css min-height: 100vh so shell can't grow */
+    }
+
     /* Override main layout so chat fills height */
     .main {
       display: flex;
       flex-direction: column;
-      height: 100vh;
+      height: 100%;
       overflow: hidden;
     }
 
     .topbar {
       flex-shrink: 0;
+      margin-bottom: 16px; /* tighten from admin.css default 32px */
     }
 
     /* Chat container */
@@ -165,7 +177,7 @@
       display: flex;
       gap: 10px;
       align-items: flex-end;
-      padding: 12px 0 16px;
+      padding: 12px 0 max(16px, env(safe-area-inset-bottom, 16px));
       border-top: 1px solid var(--border-ghost);
     }
 
