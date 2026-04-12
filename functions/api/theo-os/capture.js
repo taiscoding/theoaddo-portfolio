@@ -52,7 +52,8 @@ export async function onRequestPost({ request, env }) {
 
 Known context about Theo:
 - Facts: ${memory.facts}
-- Patterns: ${memory.patterns}`;
+- Patterns: ${memory.patterns}
+- Preferences: ${memory.preferences}`;
 
   const aiRes = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -72,9 +73,11 @@ Known context about Theo:
   if (!aiRes.ok) return err('Routing failed', 502);
 
   const aiData = await aiRes.json();
+  const rawText = aiData.content?.[0]?.text;
+  if (!rawText) return err('Empty routing response', 502);
   let routed;
   try {
-    let raw = aiData.content[0].text.trim();
+    let raw = rawText.trim();
     raw = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
     const match = raw.match(/\{[\s\S]*\}/);
     routed = JSON.parse(match ? match[0] : raw);
