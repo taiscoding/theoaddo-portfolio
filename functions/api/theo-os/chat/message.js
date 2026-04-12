@@ -15,6 +15,17 @@ const TOOLS = [
     }
   },
   {
+    name: 'fetch_url',
+    description: 'Fetch and read the actual live content of a specific URL. Use this when you need current, up-to-date information from a specific website (e.g. someone asks about polarity-lab.com — fetch it directly to get real current content).',
+    input_schema: {
+      type: 'object',
+      properties: {
+        url: { type: 'string', description: 'The full URL to fetch, e.g. https://polarity-lab.com' }
+      },
+      required: ['url']
+    }
+  },
+  {
     name: 'get_life_summary',
     description: "Get a full picture of Theo's life: task counts by area/status, goal counts by area, active goals, upcoming tasks, area health.",
     input_schema: { type: 'object', properties: {} }
@@ -95,6 +106,17 @@ const TOOLS = [
 ];
 
 // ---- Tool execution ----
+
+function htmlToText(html) {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+    .replace(/&nbsp;/g, ' ').replace(/&quot;/g, '"').replace(/&#39;/g, "'")
+    .replace(/\s+/g, ' ')
+    .trim();
+}
 
 function computeHealth(person) {
   if (!person.touchpoint_interval_days || !person.last_contact) return 'none';
@@ -230,7 +252,7 @@ async function executeTool(name, input, env) {
             api_key: env.TAVILY_API_KEY,
             query,
             max_results: 5,
-            search_depth: 'basic'
+            search_depth: 'advanced'
           })
         });
         if (!tavRes.ok) return { error: `Search failed: ${tavRes.status}` };
@@ -238,11 +260,27 @@ async function executeTool(name, input, env) {
         const results = (tavData.results || []).map(r => ({
           title: r.title,
           url: r.url,
-          content: (r.content || '').slice(0, 400)
+          content: (r.content || '').slice(0, 600)
         }));
         return { results, query };
       } catch (e) {
         return { error: `Search error: ${e.message}` };
+      }
+    }
+
+    case 'fetch_url': {
+      const { url } = input;
+      if (!url) return { error: 'url is required' };
+      try {
+        const pageRes = await fetch(url, {
+          headers: { 'User-Agent': 'Mozilla/5.0 (compatible; TheoBot/1.0; +https://theoaddo.com)' }
+        });
+        if (!pageRes.ok) return { error: `Fetch failed: ${pageRes.status}` };
+        const html = await pageRes.text();
+        const text = htmlToText(html).slice(0, 4000);
+        return { url, content: text };
+      } catch (e) {
+        return { error: `Fetch error: ${e.message}` };
       }
     }
 
