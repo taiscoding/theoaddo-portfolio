@@ -16,11 +16,23 @@ const TOOLS = [
   },
   {
     name: 'fetch_url',
-    description: 'Fetch and read the actual live content of a specific URL. Use this when you need current, up-to-date information from a specific website (e.g. someone asks about polarity-lab.com — fetch it directly to get real current content).',
+    description: 'Fetch and read the actual live content of a single URL. Use for one specific page.',
     input_schema: {
       type: 'object',
       properties: {
-        url: { type: 'string', description: 'The full URL to fetch, e.g. https://polarity-lab.com' }
+        url: { type: 'string', description: 'The full URL to fetch' }
+      },
+      required: ['url']
+    }
+  },
+  {
+    name: 'crawl_site',
+    description: 'Crawl an entire website — fetches the homepage then follows all internal links to subpages. Use this when asked about a company, project, or website to get a full picture: what they do, their work, team, projects, etc. Always prefer this over fetch_url when researching a site.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        url: { type: 'string', description: 'Root URL of the site, e.g. https://polarity-lab.com' },
+        max_pages: { type: 'number', description: 'Max pages to visit (default 8, max 12)' }
       },
       required: ['url']
     }
@@ -281,6 +293,82 @@ async function executeTool(name, input, env) {
         return { url, content: text };
       } catch (e) {
         return { error: `Fetch error: ${e.message}` };
+      }
+    }
+
+    case 'crawl_site': {
+      const { url, max_pages } = input;
+      if (!url) return { error: 'url is required' };
+      const limit = Math.min(Number(max_pages) || 8, 12);
+
+      let baseHost;
+      try { baseHost = new URL(url).hostname; } catch { return { error: 'Invalid URL' }; }
+
+      const BOT_HEADERS = { 'User-Agent': 'Mozilla/5.0 (compatible; TheoBot/1.0; +https://theoaddo.com)' };
+
+      function extractInternalLinks(html, pageUrl) {
+        const links = new Set();
+        const re = /href=["']([^"']+)["']/gi;
+        let m;
+        while ((m = re.exec(html)) !== null) {
+          try {
+            const resolved = new URL(m[1], pageUrl);
+            // same host, http/https only, skip obvious non-content
+            if (
+              resolved.hostname === baseHost &&
+              (resolved.protocol === 'http:' || resolved.protocol === 'https:') &&
+              !/\.(pdf|jpg|jpeg|png|gif|svg|ico|css|js|woff|woff2|mp4|zip)$/i.test(resolved.pathname)
+            ) {
+              // Normalize: drop hash, keep path+search
+              resolved.hash = '';
+              links.add(resolved.href);
+            }
+          } catch {}
+        }
+        return [...links];
+      }
+
+      try {
+        // Fetch homepage
+        const rootRes = await fetch(url, { headers: BOT_HEADERS });
+        if (!rootRes.ok) return { error: `Could not fetch site: ${rootRes.status}` };
+        const rootHtml = await rootRes.text();
+        const rootText = htmlToText(rootHtml).slice(0, 1500);
+        const internalLinks = extractInternalLinks(rootHtml, url);
+
+        const visited = new Set([url]);
+        const pages = [{ url, content: rootText }];
+
+        // Deduplicate links and pick up to (limit-1) unique ones not yet visited
+        const toFetch = [];
+        for (const link of internalLinks) {
+          if (visited.has(link)) continue;
+          visited.add(link);
+          toFetch.push(link);
+          if (toFetch.length >= limit - 1) break;
+        }
+
+        // Fetch all subpages in parallel
+        const subResults = await Promise.allSettled(
+          toFetch.map(async (link) => {
+            const res = await fetch(link, { headers: BOT_HEADERS });
+            if (!res.ok) return null;
+            const html = await res.text();
+            return { url: link, content: htmlToText(html).slice(0, 1200) };
+          })
+        );
+
+        for (const r of subResults) {
+          if (r.status === 'fulfilled' && r.value) pages.push(r.value);
+        }
+
+        return {
+          site: url,
+          pages_fetched: pages.length,
+          pages
+        };
+      } catch (e) {
+        return { error: `Crawl error: ${e.message}` };
       }
     }
 
