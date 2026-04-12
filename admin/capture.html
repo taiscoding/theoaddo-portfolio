@@ -150,6 +150,30 @@
       color: var(--text-tertiary);
       padding: 16px 0;
     }
+
+    .capture-stage { display: none; }
+    .capture-stage.active { display: block; }
+
+    .clarify-question { font-size: 14px; color: var(--text-secondary); margin: 12px 0 10px; line-height: 1.5; }
+    .clarify-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+    .chip { padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border-subtle); background: var(--void-elevated); font-size: 13px; color: var(--text-secondary); cursor: pointer; transition: all 0.15s; }
+    .chip:hover, .chip.selected { border-color: var(--teal); color: var(--teal); background: var(--teal-subtle); }
+
+    .preview-card { background: var(--void-elevated); border: 1px solid var(--border-subtle); border-radius: 10px; padding: 20px; margin-top: 12px; }
+    .preview-type { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--teal); margin-bottom: 8px; }
+    .preview-title { font-size: 16px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px; }
+    .preview-notes { font-size: 13px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 12px; }
+    .preview-meta { font-size: 12px; color: var(--text-tertiary); margin-bottom: 12px; }
+    .preview-people { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+    .person-chip { display: flex; align-items: center; gap: 5px; padding: 4px 10px; background: var(--teal-subtle); border-radius: 12px; font-size: 12px; color: var(--teal); }
+
+    .dedup-banner { background: var(--void-elevated); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 14px 16px; margin-top: 12px; font-size: 13px; color: var(--text-secondary); }
+    .dedup-banner strong { color: var(--text-primary); }
+    .dedup-actions { display: flex; gap: 8px; margin-top: 10px; }
+
+    .stage-hint { font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); margin-top: 10px; }
+    .btn-edit-preview { background: none; border: 1px solid var(--border-subtle); color: var(--text-secondary); padding: 7px 14px; border-radius: 6px; font-size: 13px; cursor: pointer; }
+    .btn-edit-preview:hover { border-color: var(--border-subtle); color: var(--text-primary); }
   </style>
 </head>
 <body>
@@ -191,7 +215,7 @@
     <div class="topbar">
       <div>
         <h1 class="page-title">Quick Capture</h1>
-        <p class="page-sub">Dump anything. Claude routes it.</p>
+        <p class="page-sub">Dump anything. Claude routes, enriches, and remembers.</p>
       </div>
     </div>
 
@@ -201,18 +225,60 @@
       <span id="toast-text"></span>
     </div>
 
-    <!-- Capture input -->
+    <!-- Capture input — staged pipeline -->
     <div class="capture-area">
-      <textarea
-        class="capture-textarea"
-        id="main-capture-input"
-        rows="3"
-        placeholder="What's on your mind? Task, goal, idea, person, reminder, restaurant, movie..."
-        autofocus
-      ></textarea>
-      <div class="capture-footer">
-        <span class="capture-hint-text" id="main-capture-hint">↵ to capture &nbsp;·&nbsp; Shift+↵ for new line</span>
-        <button class="capture-submit" id="capture-btn">Capture</button>
+      <!-- Stage: input -->
+      <div class="capture-stage active" id="stage-input">
+        <textarea id="capture-text" rows="3"
+          placeholder="Capture anything — task, goal, idea, person, reminder, movie to watch..."
+          style="width:100%;background:transparent;border:none;font-size:16px;color:var(--text-primary);resize:none;outline:none;font-family:var(--font-body);line-height:1.6"></textarea>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px">
+          <span class="stage-hint">↵ to capture · Esc to clear</span>
+          <button id="capture-btn" class="add-btn">Capture</button>
+        </div>
+      </div>
+
+      <!-- Stage: clarify -->
+      <div class="capture-stage" id="stage-clarify">
+        <div id="clarify-original" style="font-size:14px;color:var(--text-secondary);margin-bottom:12px"></div>
+        <div class="clarify-question" id="clarify-question"></div>
+        <div class="clarify-chips" id="clarify-chips"></div>
+        <div style="display:flex;gap:8px;margin-top:4px">
+          <button class="btn-sm btn-ghost" onclick="resetCapture()">Cancel</button>
+          <button class="btn-sm btn-primary" id="clarify-submit-btn">Submit</button>
+        </div>
+      </div>
+
+      <!-- Stage: dedup -->
+      <div class="capture-stage" id="stage-dedup">
+        <div class="dedup-banner">
+          Looks similar to: <strong id="dedup-label"></strong>
+          <div class="dedup-actions">
+            <button class="btn-sm btn-ghost" id="dedup-link-btn">Link to existing</button>
+            <button class="btn-sm btn-primary" id="dedup-new-btn">Create new</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stage: enriching -->
+      <div class="capture-stage" id="stage-enriching">
+        <div style="display:flex;align-items:center;gap:12px;padding:16px 0;color:var(--text-tertiary);font-size:13px">
+          <span id="enriching-label">Looking it up...</span>
+        </div>
+      </div>
+
+      <!-- Stage: preview -->
+      <div class="capture-stage" id="stage-preview">
+        <div class="preview-card" id="preview-card"></div>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <button class="btn-sm btn-ghost" onclick="resetCapture()">Cancel</button>
+          <button class="btn-sm btn-primary" id="preview-save-btn">Save</button>
+        </div>
+      </div>
+
+      <!-- Stage: done -->
+      <div class="capture-stage" id="stage-done">
+        <div style="padding:16px 0;font-size:14px;color:var(--teal)" id="done-msg"></div>
       </div>
     </div>
 
@@ -237,27 +303,13 @@
 <script>
   requireAuth();
 
-  // Sign out
   document.getElementById('logout-btn').addEventListener('click', e => {
     e.preventDefault();
     clearToken();
     window.location.href = '/admin/index.html';
   });
 
-  // ---- Toast ----
-
-  let toastTimer = null;
-
-  function showToast(text) {
-    const toast = document.getElementById('capture-toast');
-    document.getElementById('toast-text').textContent = text;
-    toast.classList.add('visible');
-    if (toastTimer) clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => toast.classList.remove('visible'), 2500);
-  }
-
   // ---- Time ago ----
-
   function timeAgo(isoStr) {
     const diff = Date.now() - new Date(isoStr).getTime();
     const s = Math.floor(diff / 1000);
@@ -275,8 +327,6 @@
     return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
 
-  // ---- Render recent item ----
-
   function renderItem(item) {
     const badgeClass = `badge-${item.type}`;
     const meta = item.meta ? `<span class="recent-meta">${esc(item.meta)}</span>` : '';
@@ -289,8 +339,6 @@
     </div>`;
   }
 
-  // ---- Load recent captures ----
-
   async function loadRecent() {
     const data = await apiGet('/api/theo-os/capture/recent');
     const list = document.getElementById('recent-list');
@@ -301,85 +349,191 @@
     list.innerHTML = data.recent.map(renderItem).join('');
   }
 
-  // ---- Prepend item to recent list ----
-
   function prependItem(item) {
     const list = document.getElementById('recent-list');
     const emptyEl = list.querySelector('.recent-empty');
     if (emptyEl) emptyEl.remove();
     list.insertAdjacentHTML('afterbegin', renderItem(item));
-    // Keep list trimmed to 20
     const items = list.querySelectorAll('.recent-item');
     if (items.length > 20) items[items.length - 1].remove();
   }
 
-  // ---- Submit capture ----
+  // ---- State machine ----
 
-  async function submitCapture() {
-    const textarea = document.getElementById('main-capture-input');
-    const hint = document.getElementById('main-capture-hint');
-    const btn = document.getElementById('capture-btn');
-    const text = textarea.value.trim();
-    if (!text) return;
+  let captureState = {
+    stage: 'input',
+    originalText: '',
+    routeResult: null,
+    enrichResult: null,
+    dedupMatch: null,
+    selectedChip: null
+  };
 
-    btn.disabled = true;
-    btn.textContent = 'Saving...';
-    hint.textContent = 'Routing with Claude...';
-
-    try {
-      const data = await apiPost('/api/theo-os/capture', { text });
-      if (data && data.confirmation) {
-        showToast(data.confirmation);
-        textarea.value = '';
-        textarea.focus();
-        hint.textContent = '↵ to capture \u00a0·\u00a0 Shift+↵ for new line';
-
-        // Prepend to recent list
-        if (data.saved) {
-          prependItem({
-            id: data.saved.id,
-            type: data.type,
-            title: data.type === 'person' ? data.saved.name : (data.saved.title || data.saved.content || ''),
-            meta: data.type === 'task' ? data.saved.area
-                : data.type === 'goal' ? data.saved.area
-                : data.type === 'person' ? data.saved.relationship
-                : data.type === 'collection' ? data.saved.source
-                : data.type === 'journal' ? data.saved.tags
-                : null,
-            created_at: data.saved.created_at || new Date().toISOString()
-          });
-        }
-      } else {
-        hint.textContent = 'Failed to capture — try again.';
-      }
-    } catch {
-      hint.textContent = 'Failed to capture — check connection.';
-    } finally {
-      btn.disabled = false;
-      btn.textContent = 'Capture';
-    }
+  function setStage(name) {
+    captureState.stage = name;
+    document.querySelectorAll('.capture-stage').forEach(el => el.classList.remove('active'));
+    document.getElementById(`stage-${name}`)?.classList.add('active');
   }
 
-  // Textarea: Enter submits, Shift+Enter inserts newline
-  document.getElementById('main-capture-input').addEventListener('keydown', e => {
+  function resetCapture() {
+    captureState = { stage: 'input', originalText: '', routeResult: null, enrichResult: null, dedupMatch: null, selectedChip: null };
+    document.getElementById('capture-text').value = '';
+    setStage('input');
+    document.getElementById('capture-text').focus();
+  }
+
+  async function doRoute(text, clarification = null) {
+    setStage('enriching');
+    document.getElementById('enriching-label').textContent = 'Routing...';
+    const result = await apiPost('/api/theo-os/capture', { text, clarification });
+    if (!result) { alert('Failed to route — try again'); resetCapture(); return; }
+    captureState.routeResult = result;
+
+    if (result.needs_clarification) {
+      showClarify(text, result.question, result.answer_chips);
+      return;
+    }
+
+    // Dedup check for collections/tasks/goals
+    if (['collection', 'task', 'goal'].includes(result.type) && result.data?.title) {
+      const dedup = await apiPost('/api/theo-os/capture/dedup', {
+        type: result.type, title: result.data.title
+      });
+      if (dedup?.match) {
+        captureState.dedupMatch = dedup.match;
+        showDedup(dedup.match);
+        return;
+      }
+    }
+
+    await doEnrich();
+  }
+
+  function showClarify(originalText, question, chips) {
+    document.getElementById('clarify-original').textContent = `"${originalText}"`;
+    document.getElementById('clarify-question').textContent = question;
+    const chipsEl = document.getElementById('clarify-chips');
+    chipsEl.innerHTML = '';
+    (chips || []).forEach(chip => {
+      const btn = document.createElement('button');
+      btn.className = 'chip';
+      btn.textContent = chip;
+      btn.onclick = () => {
+        chipsEl.querySelectorAll('.chip').forEach(c => c.classList.remove('selected'));
+        btn.classList.add('selected');
+        captureState.selectedChip = chip;
+      };
+      chipsEl.appendChild(btn);
+    });
+    setStage('clarify');
+  }
+
+  document.getElementById('clarify-submit-btn').onclick = async () => {
+    const clarification = captureState.selectedChip || '';
+    if (!clarification) return;
+    await doRoute(captureState.originalText, clarification);
+  };
+
+  function showDedup(match) {
+    document.getElementById('dedup-label').textContent = match.label;
+    setStage('dedup');
+  }
+
+  document.getElementById('dedup-link-btn').onclick = async () => {
+    const r = captureState.routeResult;
+    const result = await apiPost('/api/theo-os/capture/save', {
+      type: r.type, data: r.data,
+      people_ids: r.mentioned_people?.map(p => p.id).filter(Boolean) || [],
+      original_text: captureState.originalText,
+      existing_id: captureState.dedupMatch.id
+    });
+    if (!result) { alert('Failed to save'); return; }
+    showDone(`Linked to existing ${r.type}`);
+    loadRecent();
+  };
+
+  document.getElementById('dedup-new-btn').onclick = () => doEnrich();
+
+  async function doEnrich() {
+    const r = captureState.routeResult;
+    setStage('enriching');
+    const label = r.type === 'collection' ? `Looking up ${r.data?.title || 'item'}...` : 'Preparing...';
+    document.getElementById('enriching-label').textContent = label;
+
+    const result = await apiPost('/api/theo-os/capture/enrich', {
+      type: r.type,
+      data: r.data,
+      mentioned_people: r.mentioned_people || []
+    });
+
+    captureState.enrichResult = result || { enriched: r.data, people: [] };
+    showPreview();
+  }
+
+  function showPreview() {
+    const r = captureState.routeResult;
+    const e = captureState.enrichResult;
+    const enriched = e?.enriched || r.data;
+    const people = e?.people || [];
+
+    const typeLabel = { task: '✓ task', goal: '◎ goal', collection: '✦ collection', journal: '◈ journal', person: '◉ person' };
+    const peopleHtml = people.map(p => `<span class="person-chip">◉ ${esc(p.name)}</span>`).join('');
+
+    document.getElementById('preview-card').innerHTML = `
+      <div class="preview-type">${typeLabel[r.type] || r.type}${enriched.type ? ` · ${esc(enriched.type)}` : ''}</div>
+      <div class="preview-title">${esc(enriched.title || enriched.name || (enriched.content || '').slice(0, 80))}</div>
+      ${enriched.notes ? `<div class="preview-notes">${esc(enriched.notes)}</div>` : ''}
+      ${enriched.release_date ? `<div class="preview-meta">📅 ${esc(enriched.release_date)}${enriched.source ? ` · ${esc(enriched.source)}` : ''}</div>` : ''}
+      ${peopleHtml ? `<div class="preview-people">${peopleHtml}</div>` : ''}
+    `;
+    setStage('preview');
+  }
+
+  document.getElementById('preview-save-btn').onclick = async () => {
+    const r = captureState.routeResult;
+    const e = captureState.enrichResult;
+    const result = await apiPost('/api/theo-os/capture/save', {
+      type: r.type,
+      data: e?.enriched || r.data,
+      people_ids: (e?.people || r.mentioned_people || []).map(p => p.id).filter(Boolean),
+      original_text: captureState.originalText
+    });
+    if (!result) { alert('Failed to save — try again'); return; }
+    showDone(result.confirmation || `${r.type} saved`);
+    loadRecent();
+  };
+
+  function showDone(msg) {
+    document.getElementById('done-msg').textContent = `✓ ${msg}`;
+    setStage('done');
+    setTimeout(resetCapture, 2000);
+  }
+
+  // Entry point
+  document.getElementById('capture-btn').onclick = async () => {
+    const text = document.getElementById('capture-text').value.trim();
+    if (!text) return;
+    captureState.originalText = text;
+    await doRoute(text);
+  };
+
+  document.getElementById('capture-text').addEventListener('keydown', e => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      submitCapture();
+      document.getElementById('capture-btn').click();
     }
+    if (e.key === 'Escape') resetCapture();
   });
 
-  document.getElementById('capture-btn').addEventListener('click', submitCapture);
-
-  // ---- Cmd+K overlay (same as other pages) ----
-
+  // ---- Cmd+K overlay ----
   const overlay = document.getElementById('capture-overlay');
   const captureInput = document.getElementById('capture-input');
-  const captureHint = document.getElementById('capture-hint');
+  const captureHintEl = document.getElementById('capture-hint');
 
   function openCapture() {
     overlay.classList.add('open');
     captureInput.value = '';
-    captureHint.textContent = '↵ to capture · Esc to close';
+    captureHintEl.textContent = '↵ to capture · Esc to close';
     captureInput.focus();
   }
 
@@ -393,51 +547,39 @@
       e.preventDefault();
       overlay.classList.contains('open') ? closeCapture() : openCapture();
     }
-    if (e.key === 'Escape' && overlay.classList.contains('open')) {
-      closeCapture();
-    }
+    if (e.key === 'Escape' && overlay.classList.contains('open')) closeCapture();
   });
 
-  overlay.addEventListener('click', e => {
-    if (e.target === overlay) closeCapture();
-  });
+  overlay.addEventListener('click', e => { if (e.target === overlay) closeCapture(); });
 
   captureInput.addEventListener('keydown', async e => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       const text = captureInput.value.trim();
       if (!text) return;
-      captureHint.textContent = 'Saving...';
+      captureHintEl.textContent = 'Routing...';
       try {
-        const data = await apiPost('/api/theo-os/capture', { text });
-        if (data && data.confirmation) {
-          captureHint.textContent = data.confirmation;
+        const routed = await apiPost('/api/theo-os/capture', { text });
+        if (routed && !routed.needs_clarification) {
+          const saved = await apiPost('/api/theo-os/capture/save', {
+            type: routed.type, data: routed.data,
+            people_ids: routed.mentioned_people?.map(p => p.id).filter(Boolean) || [],
+            original_text: text
+          });
+          captureHintEl.textContent = saved?.confirmation || `${routed.type} saved`;
           captureInput.value = '';
-          setTimeout(() => closeCapture(), 1500);
-          if (data.saved) {
-            prependItem({
-              id: data.saved.id,
-              type: data.type,
-              title: data.type === 'person' ? data.saved.name : (data.saved.title || data.saved.content || ''),
-              meta: data.type === 'task' ? data.saved.area
-                  : data.type === 'goal' ? data.saved.area
-                  : data.type === 'person' ? data.saved.relationship
-                  : data.type === 'collection' ? data.saved.source
-                  : data.type === 'journal' ? data.saved.tags
-                  : null,
-              created_at: data.saved.created_at || new Date().toISOString()
-            });
-          }
+          setTimeout(closeCapture, 1500);
+          loadRecent();
         } else {
-          captureHint.textContent = 'Failed to save — check connection.';
+          captureHintEl.textContent = 'Needs more context — use the main capture box.';
+          setTimeout(closeCapture, 2000);
         }
       } catch {
-        captureHint.textContent = 'Failed to save — check connection.';
+        captureHintEl.textContent = 'Failed — check connection.';
       }
     }
   });
 
-  // ---- Init ----
   loadRecent();
 </script>
 </body>
