@@ -17,9 +17,14 @@ export async function onRequestPost({ request, env }) {
   const mapping = tableMap[type];
   if (!mapping) return json({ match: null });
 
-  const { results } = await env.THEO_OS_DB.prepare(
-    `SELECT id, ${mapping.field} as label, weight FROM ${mapping.table} ORDER BY weight DESC, id DESC LIMIT 50`
-  ).all();
+  let results;
+  try {
+    ({ results } = await env.THEO_OS_DB.prepare(
+      `SELECT id, ${mapping.field} as label, weight FROM ${mapping.table} ORDER BY weight DESC, id DESC LIMIT 50`
+    ).all());
+  } catch {
+    return err('Database error', 500);
+  }
 
   const normalize = s => s.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
   const words = s => new Set(normalize(s).split(/\s+/).filter(w => w.length > 3));
@@ -29,6 +34,7 @@ export async function onRequestPost({ request, env }) {
   let bestScore = 0;
 
   for (const record of results) {
+    if (!record.label) continue;
     const recordWords = words(record.label);
     const intersection = [...titleWords].filter(w => recordWords.has(w));
     const union = new Set([...titleWords, ...recordWords]);

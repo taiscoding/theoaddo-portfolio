@@ -54,27 +54,26 @@ export async function onRequestPost({ request, env }) {
 
   const memory = await loadMemoryContext(env);
 
-  const aiRes = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': env.ANTHROPIC_API_KEY,
-      'anthropic-version': '2023-06-01'
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 512,
-      system: `${ENRICH_SYSTEM}\n\nUser context:\n- Facts: ${memory.facts}\n- Patterns: ${memory.patterns}\n- Preferences: ${memory.preferences}`,
-      messages: [{
-        role: 'user',
-        content: `Enrich this ${type}: "${data.title}"\n\nSearch results:\n${searchResults || 'No results found.'}`
-      }]
-    })
-  });
-
   let enriched = { ...data };
-  if (aiRes.ok) {
-    try {
+  try {
+    const aiRes = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 512,
+        system: `${ENRICH_SYSTEM}\n\nUser context:\n- Facts: ${memory.facts}\n- Patterns: ${memory.patterns}\n- Preferences: ${memory.preferences}`,
+        messages: [{
+          role: 'user',
+          content: `Enrich this ${type}: "${data.title}"\n\nSearch results:\n${searchResults || 'No results found.'}`
+        }]
+      })
+    });
+    if (aiRes.ok) {
       const aiData = await aiRes.json();
       const rawText = aiData.content?.[0]?.text;
       if (rawText) {
@@ -84,19 +83,23 @@ export async function onRequestPost({ request, env }) {
         const parsed = JSON.parse(match ? match[0] : raw);
         enriched = { ...data, ...parsed };
       }
-    } catch { /* return un-enriched data on parse failure */ }
-  }
+    }
+  } catch { /* degrade gracefully — return un-enriched data if AI call fails */ }
 
   // Resolve mentioned people IDs to full records
   let people = [];
   if (mentioned_people?.length) {
-    const ids = mentioned_people.map(p => p.id).filter(Boolean);
+    const ids = mentioned_people
+      .map(p => p.id)
+      .filter(id => typeof id === 'number' || typeof id === 'string');
     if (ids.length) {
-      const placeholders = ids.map(() => '?').join(',');
-      const { results } = await env.THEO_OS_DB.prepare(
-        `SELECT id, name, relationship FROM people WHERE id IN (${placeholders})`
-      ).bind(...ids).all();
-      people = results;
+      try {
+        const placeholders = ids.map(() => '?').join(',');
+        const { results } = await env.THEO_OS_DB.prepare(
+          `SELECT id, name, relationship FROM people WHERE id IN (${placeholders})`
+        ).bind(...ids).all();
+        people = results;
+      } catch { /* people resolution failure doesn't block enrichment */ }
     }
   }
 
