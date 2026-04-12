@@ -169,9 +169,9 @@ export async function resolveAliases(text, env) {
       for (const alias of namesToCheck) {
         if (!alias) continue;
         const regex = new RegExp(`\\b${alias.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi');
-        if (regex.test(resolved)) {
-          // Replace with canonical name annotated with ID for AI context
-          resolved = resolved.replace(regex, `${person.name}[person:${person.id}]`);
+        const next = resolved.replace(regex, `${person.name}[person:${person.id}]`);
+        if (next !== resolved) {
+          resolved = next;
           if (!mentioned.find(m => m.id === person.id)) {
             mentioned.push({ id: person.id, name: person.name });
           }
