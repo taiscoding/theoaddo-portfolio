@@ -39,9 +39,10 @@
       flex-direction: column;
       flex: 1;
       min-height: 0;
+      position: relative;
     }
 
-    /* Messages area */
+    /* Messages area — no visible scrollbar */
     .messages-area {
       flex: 1;
       overflow-y: auto;
@@ -49,18 +50,39 @@
       display: flex;
       flex-direction: column;
       gap: 12px;
+      scrollbar-width: none; /* Firefox */
     }
+    .messages-area::-webkit-scrollbar { display: none; } /* Chrome/Safari/iOS */
 
-    .messages-area::-webkit-scrollbar {
-      width: 4px;
+    /* Scroll-to-bottom button */
+    .scroll-btn {
+      position: absolute;
+      bottom: 76px; /* sits just above the input row */
+      left: 50%;
+      transform: translateX(-50%);
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--void-elevated);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.4);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s, transform 0.2s;
+      transform: translateX(-50%) translateY(4px);
+      z-index: 10;
     }
-    .messages-area::-webkit-scrollbar-track {
-      background: transparent;
+    .scroll-btn.visible {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateX(-50%) translateY(0);
     }
-    .messages-area::-webkit-scrollbar-thumb {
-      background: var(--border-subtle);
-      border-radius: 2px;
-    }
+    .scroll-btn:hover { background: var(--void-surface); }
 
     /* Message bubbles */
     .message {
@@ -269,6 +291,12 @@
         <!-- Messages populated by JS -->
       </div>
 
+      <button class="scroll-btn" id="scroll-btn" aria-label="Scroll to bottom">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="6 9 12 15 18 9"></polyline>
+        </svg>
+      </button>
+
       <div class="input-row">
         <textarea
           class="chat-input"
@@ -363,11 +391,29 @@
     return html;
   }
 
+  // ---- Scroll-to-bottom button ----
+
+  const messagesArea = document.getElementById('messages-area');
+  const scrollBtn = document.getElementById('scroll-btn');
+
+  function updateScrollBtn() {
+    const { scrollTop, scrollHeight, clientHeight } = messagesArea;
+    const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+    if (distanceFromBottom > 80) {
+      scrollBtn.classList.add('visible');
+    } else {
+      scrollBtn.classList.remove('visible');
+    }
+  }
+
+  messagesArea.addEventListener('scroll', updateScrollBtn, { passive: true });
+
+  scrollBtn.addEventListener('click', () => scrollToBottom(true));
+
   // ---- DOM helpers ----
 
   function scrollToBottom(smooth) {
-    const area = document.getElementById('messages-area');
-    area.scrollTo({ top: area.scrollHeight, behavior: smooth ? 'smooth' : 'instant' });
+    messagesArea.scrollTo({ top: messagesArea.scrollHeight, behavior: smooth ? 'smooth' : 'instant' });
   }
 
   function appendMessage(role, content, toolCallsMade) {
