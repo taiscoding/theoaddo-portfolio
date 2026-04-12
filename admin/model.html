@@ -211,7 +211,7 @@
           if (action === 'delete') {
             if (!confirm('Delete this memory?')) return;
             await apiFetch(`/api/theo-os/memories/${id}`, { method: 'DELETE' });
-            load();
+            card.remove();
           } else if (action === 'boost') {
             const confFill = card.querySelector('.conf-fill');
             const current = parseFloat(confFill.style.width) / 100;
