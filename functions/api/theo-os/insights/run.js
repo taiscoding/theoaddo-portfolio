@@ -7,8 +7,9 @@ export async function onRequestPost({ request, env }) {
   const today = new Date().toISOString().split('T')[0];
   let areaActivity = [], overduePeople = [], staleGoals = [], staleCollectionsCount = 0, lifeVision = [];
 
+  let recentJournal = [];
   try {
-    const [areaRes, peopleRes, goalsRes, visionRes] = await Promise.all([
+    const [areaRes, peopleRes, goalsRes, visionRes, journalRes] = await Promise.all([
       env.THEO_OS_DB.prepare(`
         SELECT area, MAX(last_active) as last_active FROM (
           SELECT area, MAX(updated_at) as last_active FROM tasks WHERE updated_at >= datetime('now', '-14 days') GROUP BY area
@@ -24,11 +25,15 @@ export async function onRequestPost({ request, env }) {
       env.THEO_OS_DB.prepare(
         `SELECT area, vision, current_phase FROM life_vision WHERE vision IS NOT NULL`
       ).all(),
+      env.THEO_OS_DB.prepare(
+        `SELECT content, created_at FROM journal WHERE created_at >= datetime('now', '-14 days') ORDER BY created_at DESC LIMIT 8`
+      ).all().catch(() => ({ results: [] })),
     ]);
     areaActivity = areaRes.results || [];
     overduePeople = peopleRes.results || [];
     staleGoals = goalsRes.results || [];
     lifeVision = visionRes.results || [];
+    recentJournal = (journalRes.results || []).map(j => `[${j.created_at?.slice(0, 10)}] ${j.content?.slice(0, 250)}`);
     const staleCollRes = await env.THEO_OS_DB.prepare(
       `SELECT COUNT(*) as count FROM collections WHERE status = 'want' AND created_at <= datetime('now', '-30 days')`
     ).first();
@@ -42,22 +47,30 @@ export async function onRequestPost({ request, env }) {
     ? lifeVision.map(v => `${v.area}: "${v.vision}"${v.current_phase ? ` (current phase: ${v.current_phase})` : ''}`).join('\n')
     : 'No life vision recorded.';
   const driftingAreas = lifeVision.filter(v => !activeAreas.has(v.area)).map(v => v.area);
+  const journalText = recentJournal.length > 0 ? recentJournal.join('\n') : 'none';
 
-  const prompt = `You are the MindMapper for a personal life OS. Generate 3-5 behavioral pattern observations that are honest, specific, and connect behavior to stated intentions where possible.
+  const prompt = `You are analyzing the past 14 days of Theo's life. Generate 3-5 honest, specific observations about patterns, alignment with stated intentions, and what the data actually suggests.
+
+Important: the logged activity data only reflects what was captured in this OS. Journal entries are the ground truth of what was actually happening — weight them heavily. If the journal describes real work or focus that doesn't show up in task/goal logs, that means the OS is undercaptured, not that the work didn't happen.
 
 What Theo says matters to him (life vision):
 ${visionText}
 
-Behavioral data (last 14 days):
-- Active life areas: ${areaActivity.length > 0 ? areaActivity.map(a => `${a.area} (last: ${a.last_active})`).join(', ') : 'none'}
-- Areas with stated vision but NO recent activity: ${driftingAreas.length > 0 ? driftingAreas.join(', ') : 'none'}
+Logged activity in OS (last 14 days — may be incomplete):
+- Active life areas: ${areaActivity.length > 0 ? areaActivity.map(a => `${a.area} (last: ${a.last_active})`).join(', ') : 'none logged'}
+- Areas with stated vision but no logged activity: ${driftingAreas.length > 0 ? driftingAreas.join(', ') : 'none'}
 - People overdue for contact: ${overduePeople.length > 0 ? overduePeople.map(p => `${p.name} (${p.relationship})`).join(', ') : 'none'}
 - Goals with no recent task progress: ${staleGoals.length > 0 ? staleGoals.map(g => `${g.title} [${g.area}]`).join(', ') : 'none'}
 - Collections waiting over 30 days: ${staleCollectionsCount} items
 
+Journal entries (last 14 days — ground truth of what was actually happening):
+${journalText}
+
 Rules:
-- Where behavior contradicts a stated vision, name the contradiction directly
-- Do not soften observations
+- Journal entries override logged activity as evidence of what actually happened
+- If journal and logs conflict, trust the journal and note the capture gap
+- Where behavior contradicts stated vision AND the journal confirms it, name it directly
+- Do not claim drift or inactivity if the journal suggests otherwise
 - Be specific, not generic
 
 Return JSON array only: [{area, insight, type}] where type is one of: drift, decay, pattern, relationship`;
