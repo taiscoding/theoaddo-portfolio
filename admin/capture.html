@@ -329,9 +329,18 @@
     return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
 
+  function normalizeMeta(meta) {
+    if (!meta) return '';
+    if (meta.trim().startsWith('[')) {
+      try { return JSON.parse(meta).join(', '); } catch {}
+    }
+    return meta;
+  }
+
   function renderItem(item) {
     const badgeClass = `badge-${item.type}`;
-    const meta = item.meta ? `<span class="recent-meta">${esc(item.meta)}</span>` : '';
+    const metaStr = normalizeMeta(item.meta);
+    const meta = metaStr ? `<span class="recent-meta">${esc(metaStr)}</span>` : '';
     const time = item.created_at ? `<span class="recent-time">${timeAgo(item.created_at)}</span>` : '';
     return `<div class="recent-item">
       <span class="recent-badge ${badgeClass}">${esc(item.type)}</span>

@@ -368,6 +368,9 @@
 
   function parseTags(tagsStr) {
     if (!tagsStr) return [];
+    if (tagsStr.trim().startsWith('[')) {
+      try { return JSON.parse(tagsStr).map(t => String(t).trim()).filter(Boolean); } catch {}
+    }
     return tagsStr.split(',').map(t => t.trim()).filter(Boolean);
   }
 
