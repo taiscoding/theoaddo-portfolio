@@ -341,6 +341,14 @@
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
 
+  // Render basic markdown: **bold**, *italic*, newlines → <br>
+  function renderMd(s) {
+    return esc(s)
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.+?)\*/g, '<em>$1</em>')
+      .replace(/\n/g, '<br>');
+  }
+
   // -- Briefing --
 
   let pendingInsights = [];
@@ -358,7 +366,7 @@
     }
 
     if (data.briefing) {
-      bodyEl.innerHTML = `<div class="briefing-body">${esc(data.briefing.text)}</div>`;
+      bodyEl.innerHTML = `<div class="briefing-body">${renderMd(data.briefing.text)}</div>`;
       if (data.briefing.generated_at) {
         const d = new Date(data.briefing.generated_at);
         timeEl.textContent = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -377,7 +385,7 @@
       const bodyEl = document.getElementById('briefing-body');
       const timeEl = document.getElementById('briefing-time');
       if (data && data.briefing) {
-        bodyEl.innerHTML = `<div class="briefing-body">${esc(data.briefing.text)}</div>`;
+        bodyEl.innerHTML = `<div class="briefing-body">${renderMd(data.briefing.text)}</div>`;
         if (data.briefing.generated_at) {
           const d = new Date(data.briefing.generated_at);
           timeEl.textContent = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
