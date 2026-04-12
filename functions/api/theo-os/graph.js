@@ -120,7 +120,7 @@ export async function onRequestGet({ request, env }) {
       const source = `${c.from_type}:${c.from_id}`;
       const target = `${c.to_type}:${c.to_id}`;
       if (nodeSet.has(source) && nodeSet.has(target)) {
-        edges.push({ data: { id: `${source}->${target}`, source, target, label: c.label || '' } });
+        edges.push({ data: { id: `${source}->${target}`, source, target, label: c.label || '', strength: 1 } });
       }
     }
   } catch (e) {

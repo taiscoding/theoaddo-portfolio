@@ -115,20 +115,22 @@
         {
           selector: 'node',
           style: {
-            'background-color': 'data(color)',
-            'background-opacity': 'data(decay)',
-            'width': (ele) => 12 + ele.data('weight') * 14,
-            'height': (ele) => 12 + ele.data('weight') * 14,
+            'width': 'mapData(weight, 1, 10, 18, 60)',
+            'height': 'mapData(weight, 1, 10, 18, 60)',
+            'background-color': 'mapData(weight, 1, 10, #1a1a2e, #4ECDC4)',
+            'border-width': 'mapData(weight, 1, 10, 1, 3)',
+            'border-color': 'mapData(weight, 1, 10, rgba(78,205,196,0.2), rgba(78,205,196,0.9))',
             'label': 'data(label)',
-            'font-size': 9,
-            'font-family': 'Space Grotesk, sans-serif',
-            'color': labelColor,
+            'color': '#fff',
+            'font-size': 'mapData(weight, 1, 10, 9, 13)',
             'text-valign': 'bottom',
+            'text-margin-y': '4px',
+            'text-outline-width': 2,
+            'text-outline-color': '#000',
+            'font-family': 'Space Grotesk, sans-serif',
             'text-halign': 'center',
-            'text-margin-y': 4,
             'text-max-width': 80,
             'text-wrap': 'ellipsis',
-            'border-width': 0,
             'min-zoomed-font-size': 8,
           }
         },
@@ -151,10 +153,11 @@
         {
           selector: 'edge',
           style: {
-            'width': 1,
-            'line-color': edgeColor,
+            'width': 'mapData(strength, 0, 5, 1, 4)',
+            'line-color': 'rgba(78,205,196,0.25)',
+            'opacity': 0.6,
             'target-arrow-shape': 'triangle',
-            'target-arrow-color': edgeColor,
+            'target-arrow-color': 'rgba(78,205,196,0.25)',
             'curve-style': 'bezier',
             'label': 'data(label)',
             'font-size': 8,
@@ -162,7 +165,6 @@
             'font-family': 'JetBrains Mono, monospace',
             'text-rotation': 'autorotate',
             'text-margin-y': -6,
-            'opacity': 0.6,
           }
         },
         {
@@ -195,6 +197,7 @@
       document.getElementById('tt-type').textContent = d.type;
       document.getElementById('tt-label').textContent = d.label;
       const metaParts = [d.area];
+      if (d.weight != null) metaParts.push(`weight: ${Number(d.weight).toFixed(1)}`);
       if (d.decay < 0.99) metaParts.push(`retention: ${(d.decay * 100).toFixed(0)}%`);
       document.getElementById('tt-meta').textContent = metaParts.filter(Boolean).join(' · ');
       tooltip.style.display = 'block';
