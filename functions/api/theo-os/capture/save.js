@@ -93,9 +93,10 @@ export async function onRequestPost({ request, env }) {
         ).bind(data.type || 'other', data.title, data.notes || null, data.source || null).all();
         saved = results[0];
       } else if (type === 'journal') {
+        const tags = Array.isArray(data.tags) ? JSON.stringify(data.tags) : (data.tags || null);
         const { results } = await env.THEO_OS_DB.prepare(
           `INSERT INTO journal (content, tags, weight) VALUES (?, ?, 1.0) RETURNING *`
-        ).bind(data.content, data.tags || null).all();
+        ).bind(data.content, tags).all();
         saved = results[0];
       } else {
         return err(`Unknown type: ${type}`, 400);
