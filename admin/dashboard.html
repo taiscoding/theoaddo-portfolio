@@ -178,7 +178,7 @@
           <button class="insight-dismiss" id="insight-dismiss" title="Dismiss">&#x2715;</button>
         </div>
       </div>
-      <div id="insight-empty" class="insight-empty">No insights yet. Hit "Run now" to generate.</div>
+      <div id="insight-empty" class="insight-empty">No insights yet. <button class="insight-run-btn" id="insight-run-btn-2" style="font-size:11px;padding:3px 10px;">↺ Run now</button></div>
     </div>
 
     <!-- Agents -->
@@ -548,22 +548,25 @@
     };
   }
 
-  document.getElementById('insight-run-btn').addEventListener('click', async () => {
-    const btn = document.getElementById('insight-run-btn');
-    btn.textContent = 'Running...';
-    btn.disabled = true;
+  async function runMindMapper() {
+    const btns = [
+      document.getElementById('insight-run-btn'),
+      document.getElementById('insight-run-btn-2'),
+    ].filter(Boolean);
+    btns.forEach(b => { b.textContent = 'Running...'; b.disabled = true; });
     try {
       const result = await apiPost('/api/theo-os/insights/run', {});
-      if (result?.insights) {
-        renderInsight(result.insights);
-      }
-      btn.textContent = result?.created > 0 ? `✓ ${result.created} generated` : '✓ Done';
-      setTimeout(() => { btn.textContent = '↺ Run now'; btn.disabled = false; }, 3000);
+      if (result?.insights) renderInsight(result.insights);
+      const label = result?.created > 0 ? `✓ ${result.created} generated` : '✓ Done';
+      btns.forEach(b => { b.textContent = label; });
+      setTimeout(() => btns.forEach(b => { b.textContent = '↺ Run now'; b.disabled = false; }), 3000);
     } catch {
-      btn.textContent = 'Error';
-      btn.disabled = false;
+      btns.forEach(b => { b.textContent = 'Error'; b.disabled = false; });
     }
-  });
+  }
+
+  document.getElementById('insight-run-btn').addEventListener('click', runMindMapper);
+  document.getElementById('insight-run-btn-2')?.addEventListener('click', runMindMapper);
 
   // -- Stats Breakdown --
 
