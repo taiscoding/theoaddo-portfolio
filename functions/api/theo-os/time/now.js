@@ -3,11 +3,7 @@ import { json, err, requireAdmin, loadMemoryContext } from '../_utils.js';
 const KV_KEY = 'time:now:digest';
 const KV_TTL = 4 * 3600; // 4 hours max, but invalidated on write
 
-const NOW_SYSTEM = `You are generating a short "now" digest for Theo OS.
-Given open tasks, upcoming goals, and overdue touchpoints, write 3-5 sentences
-that feel like a trusted friend catching you up on what actually matters right now.
-Not a list — a paragraph. Calm, honest, direct. No alarm language.
-Return plain text only, no JSON, no markdown.`;
+const NOW_SYSTEM = `You have context on what is open in Theo's life right now. What actually matters at this moment? Be specific — name things, not categories. 3-5 sentences. No structure, no labels, no filler. Return plain text only.`;
 
 export async function onRequestGet({ request, env, ctx }) {
   if (!await requireAdmin(request, env)) return err('Unauthorized', 401);

@@ -46,22 +46,17 @@ export async function onRequestPost({ request, env }) {
       max_tokens: 500,
       messages: [{
         role: 'user',
-        content: `Generate a morning briefing for Theo. Be direct and useful, not performative.
+        content: `Here is Theo's context for today. Synthesize what actually matters — not a summary, not a structure, just what's real.
 
-What you know about Theo:
+What you know:
 - Patterns: ${memory.patterns}
 - Preferences: ${memory.preferences}
 
-Use this to calibrate tone and emphasis. If patterns show stress or avoidance, acknowledge it briefly. Don't mention the memory system explicitly.
-
 Context: ${JSON.stringify(context, null, 2)}
 
-Write 2-3 short paragraphs. First: what today looks like (tasks due, overdue items).
-Second: what needs attention (relationships, upcoming deadlines).
-Third: one honest observation about momentum based on the context.
+What needs his attention today? What is the honest state of things? If something is overdue and matters, name it. If a relationship has been neglected, say so. If momentum is stalling somewhere, say that. If today is genuinely clear, say that too.
 
-If context.knowledge_due has items, add a brief line at the end naming the topics due for review (e.g. "3 knowledge areas due: X, Y, Z"). If decay is very low (<0.2), treat it like an overdue task — acknowledge the cognitive drift directly.
-No greeting. No filler. Just signal. If there's nothing to report in a section, skip it.`
+No headers. No "First... Second... Third..." structure. No filler sentences. 2-3 paragraphs. If knowledge areas are decaying, name them specifically. Write as if you are actually thinking about his life, not generating a report about it.`
       }]
     })
   });
