@@ -4,7 +4,17 @@ import { json, err, requireAdmin } from '../_utils.js';
 
 const TOOLS = [
   {
-    name: 'get_life_summary',
+    name: 'web_search',
+    description: 'Search the web for current information about any topic — websites, companies, people, news, products, etc.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: 'Search query' }
+      },
+      required: ['query']
+    }
+  },
+  {
     description: "Get a full picture of Theo's life: task counts by area/status, goal counts by area, active goals, upcoming tasks, area health.",
     input_schema: { type: 'object', properties: {} }
   },
@@ -206,6 +216,33 @@ async function executeTool(name, input, env) {
         `UPDATE tasks SET ${sets.join(', ')} WHERE id = ? RETURNING *`
       ).bind(...binds).all();
       return { task: results[0] || null };
+    }
+
+    case 'web_search': {
+      const { query } = input;
+      if (!query) return { error: 'query is required' };
+      try {
+        const tavRes = await fetch('https://api.tavily.com/search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            api_key: env.TAVILY_API_KEY,
+            query,
+            max_results: 5,
+            search_depth: 'basic'
+          })
+        });
+        if (!tavRes.ok) return { error: `Search failed: ${tavRes.status}` };
+        const tavData = await tavRes.json();
+        const results = (tavData.results || []).map(r => ({
+          title: r.title,
+          url: r.url,
+          content: (r.content || '').slice(0, 400)
+        }));
+        return { results, query };
+      } catch (e) {
+        return { error: `Search error: ${e.message}` };
+      }
     }
 
     default:
