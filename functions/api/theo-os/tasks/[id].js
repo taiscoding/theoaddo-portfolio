@@ -1,6 +1,6 @@
 import { json, err, requireAdmin, AREAS } from '../_utils.js';
 
-const VALID_STATUSES = ['inbox', 'today', 'this_week', 'later', 'someday'];
+const VALID_STATUSES = ['inbox', 'today', 'this_week', 'later', 'someday', 'done'];
 
 export async function onRequestPatch({ request, env, params }) {
   if (!await requireAdmin(request, env)) return err('Unauthorized', 401);
