@@ -315,6 +315,15 @@
   </div>
 </div>
 
+<!-- Cmd+K capture overlay -->
+<div class="capture-overlay" id="capture-overlay">
+  <div class="capture-box">
+    <textarea class="capture-input" id="capture-input"
+      placeholder="Capture anything — task, goal, idea, person, reminder, restaurant..." rows="2"></textarea>
+    <div class="capture-hint" id="capture-hint">↵ to capture · Esc to close</div>
+  </div>
+</div>
+
 <script src="/admin/js/auth.js?v=4"></script>
 <script>
   requireAuth();
@@ -694,14 +703,5 @@
   })();
 
 </script>
-
-<!-- Cmd+K capture overlay -->
-<div class="capture-overlay" id="capture-overlay">
-  <div class="capture-box">
-    <textarea class="capture-input" id="capture-input"
-      placeholder="Capture anything — task, goal, idea, person, reminder, restaurant..." rows="2"></textarea>
-    <div class="capture-hint" id="capture-hint">↵ to capture · Esc to close</div>
-  </div>
-</div>
 </body>
 </html>
