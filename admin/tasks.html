@@ -101,6 +101,53 @@
     .btn-danger:hover { background: rgba(255,138,101,0.22); opacity: 1; }
 
     .modal-footer-left { margin-right: auto; }
+
+    /* Complete button on task cards */
+    .task-card { position: relative; display: flex; align-items: flex-start; gap: 10px; }
+    .task-card-body { flex: 1; min-width: 0; }
+    .complete-btn {
+      flex-shrink: 0; margin-top: 1px;
+      width: 18px; height: 18px; border-radius: 50%;
+      border: 1.5px solid var(--border-subtle); background: none;
+      color: transparent; font-size: 10px; line-height: 1;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: border-color 0.15s, background 0.15s, color 0.15s;
+      padding: 0; flex-shrink: 0;
+    }
+    .complete-btn:hover { border-color: var(--teal); color: var(--teal); background: var(--teal-subtle); }
+
+    /* Done section */
+    .done-section { margin-top: 28px; }
+    .done-toggle {
+      display: flex; align-items: center; gap: 10px; background: none; border: none;
+      cursor: pointer; padding: 6px 0; font-family: var(--font-mono);
+      font-size: 11px; font-weight: 500; letter-spacing: 0.08em;
+      text-transform: uppercase; color: var(--text-tertiary);
+    }
+    .done-toggle:hover { color: var(--text-secondary); }
+    .done-arrow { font-size: 9px; transition: transform 0.2s; display: inline-block; }
+    .done-arrow.open { transform: rotate(90deg); }
+    .done-count {
+      background: var(--void-surface); border-radius: 10px;
+      padding: 2px 8px; font-size: 11px; font-family: var(--font-mono);
+      color: var(--text-tertiary);
+    }
+    .done-cards {
+      display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px;
+      padding-bottom: 40px;
+    }
+    .done-card {
+      width: 210px; background: var(--void-elevated);
+      border: 1px solid var(--border-ghost); border-radius: 7px;
+      padding: 11px 12px; cursor: pointer;
+      transition: border-color 0.2s; opacity: 0.6;
+    }
+    .done-card:hover { opacity: 1; border-color: var(--border-subtle); }
+    .done-card .task-title {
+      text-decoration: line-through; color: var(--text-tertiary); margin-bottom: 5px;
+    }
+    .done-card:hover .task-title { color: var(--text-secondary); }
+    .done-empty { font-size: 12px; color: var(--text-tertiary); padding: 4px 0; }
   </style>
 </head>
 <body>
@@ -129,7 +176,7 @@
 
     <div class="sidebar-label">Intelligence</div>
     <a href="/admin/chat.html" class="sidebar-link">Chat</a>
-    <a href="/admin/model.html" class="sidebar-link">The Theo Model</a>
+    <a href="/admin/model.html" class="sidebar-link">The Model</a>
     <a href="/admin/knowledge.html" class="sidebar-link">Knowledge</a>
     <a href="/admin/learn.html" class="sidebar-link">Learn</a>
     <a href="/admin/graph.html" class="sidebar-link">Knowledge Graph</a>
@@ -198,6 +245,16 @@
         <div class="col-cards" id="cards-someday"></div>
       </div>
     </div>
+
+    <!-- Done section -->
+    <div class="done-section" id="done-section">
+      <button class="done-toggle" id="done-toggle" aria-expanded="false" aria-controls="done-cards">
+        <span class="done-arrow" id="done-arrow">▶</span>
+        <span>Done</span>
+        <span class="done-count" id="done-count">0</span>
+      </button>
+      <div class="done-cards" id="done-cards" style="display:none"></div>
+    </div>
   </main>
 </div>
 
@@ -234,6 +291,7 @@
         <option value="this_week">This Week</option>
         <option value="later">Later</option>
         <option value="someday">Someday</option>
+        <option value="done">Done</option>
       </select>
     </div>
 
@@ -273,6 +331,7 @@
   let editingId = null;
 
   const STATUSES = ['inbox', 'today', 'this_week', 'later', 'someday'];
+  let doneOpen = localStorage.getItem('theo_done_open') === 'true';
 
   const AREA_CLASS = {
     work: 'area-teal', growth: 'area-teal',
@@ -313,6 +372,7 @@
   function renderBoard() {
     const tasks = visibleTasks();
 
+    renderDone();
     STATUSES.forEach(status => {
       const colTasks = tasks.filter(t => t.status === status);
       const countEl = document.getElementById('count-' + status);
@@ -349,22 +409,76 @@
           tabindex="0"
           aria-label="${esc(task.title)}"
         >
-          <div class="task-title">${esc(task.title)}</div>
-          ${hasMeta ? `<div class="task-meta">${areaBadge}${dueBadge}</div>` : ''}
+          <button class="complete-btn" data-id="${task.id}" title="Mark complete" tabindex="0">✓</button>
+          <div class="task-card-body">
+            <div class="task-title">${esc(task.title)}</div>
+            ${hasMeta ? `<div class="task-meta">${areaBadge}${dueBadge}</div>` : ''}
+          </div>
         </div>`;
       }).join('');
 
       // Attach card event listeners
       cardsEl.querySelectorAll('.task-card').forEach(card => {
-        card.addEventListener('click', () => openEditModal(Number(card.dataset.id)));
+        card.addEventListener('click', e => {
+          if (e.target.closest('.complete-btn')) return;
+          openEditModal(Number(card.dataset.id));
+        });
         card.addEventListener('keydown', e => {
           if (e.key === 'Enter' || e.key === ' ') openEditModal(Number(card.dataset.id));
         });
         card.addEventListener('dragstart', onDragStart);
         card.addEventListener('dragend', onDragEnd);
+        card.querySelector('.complete-btn').addEventListener('click', e => {
+          e.stopPropagation();
+          patchTask(Number(card.dataset.id), { status: 'done' });
+        });
       });
     });
   }
+
+  // ---- Render done section ----
+
+  function renderDone() {
+    const tasks = visibleTasks().filter(t => t.status === 'done');
+    const countEl = document.getElementById('done-count');
+    const cardsEl = document.getElementById('done-cards');
+    const arrow = document.getElementById('done-arrow');
+    const toggle = document.getElementById('done-toggle');
+
+    countEl.textContent = tasks.length;
+    toggle.setAttribute('aria-expanded', doneOpen);
+    arrow.classList.toggle('open', doneOpen);
+    cardsEl.style.display = doneOpen ? 'flex' : 'none';
+
+    if (tasks.length === 0) {
+      cardsEl.innerHTML = '<div class="done-empty">No completed tasks yet.</div>';
+      return;
+    }
+
+    cardsEl.innerHTML = tasks.map(task => {
+      const areaClass = (task.area && AREA_CLASS[task.area]) || 'area-slate';
+      const areaBadge = task.area
+        ? `<span class="area-badge ${areaClass}">${esc(task.area)}</span>`
+        : '';
+      return `<div class="done-card" data-id="${task.id}" role="button" tabindex="0" aria-label="${esc(task.title)}">
+        <div class="task-title">${esc(task.title)}</div>
+        ${task.area ? `<div class="task-meta">${areaBadge}</div>` : ''}
+      </div>`;
+    }).join('');
+
+    cardsEl.querySelectorAll('.done-card').forEach(card => {
+      card.addEventListener('click', () => openEditModal(Number(card.dataset.id)));
+      card.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') openEditModal(Number(card.dataset.id));
+      });
+    });
+  }
+
+  document.getElementById('done-toggle').addEventListener('click', () => {
+    doneOpen = !doneOpen;
+    localStorage.setItem('theo_done_open', doneOpen);
+    renderDone();
+  });
 
   // ---- Area filter ----
 
