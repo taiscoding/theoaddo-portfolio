@@ -111,7 +111,11 @@ async function apiPatch(path, body) {
     method: 'PATCH', headers: authHeaders(), body: JSON.stringify(body)
   });
   if (res.status === 401) { clearToken(); window.location.href = '/admin/index.html'; return null; }
-  if (!res.ok) return null;
+  if (!res.ok) {
+    try { apiPatch._lastError = (await res.json()).error || `HTTP ${res.status}`; } catch { apiPatch._lastError = `HTTP ${res.status}`; }
+    return null;
+  }
+  apiPatch._lastError = null;
   return res.json();
 }
 
