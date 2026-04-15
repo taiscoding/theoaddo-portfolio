@@ -537,8 +537,7 @@
   async function patchTask(id, fields) {
     const updated = await apiPatch('/api/theo-os/tasks/' + id, fields);
     if (!updated) {
-      console.error('patchTask failed for id', id, fields);
-      alert('Failed to update task: ' + (apiPatch._lastError || 'unknown error'));
+      console.error('patchTask failed:', apiPatch._lastError);
       return;
     }
     const idx = allTasks.findIndex(t => t.id === id);
